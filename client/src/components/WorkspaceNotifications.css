@@ -31,7 +31,15 @@
   gap: .5rem;
 }
 .workspace-notifications-heading { padding: .65rem .75rem; border-bottom: 1px solid var(--line); }
-.workspace-notifications-list { max-height: min(16rem, 42dvh); overflow-y: auto; overscroll-behavior: contain; padding: .45rem .75rem; }
+.workspace-notifications-list {
+  --notification-row-height: 4rem;
+  max-height: min(calc(4 * var(--notification-row-height)), 42dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-inline: .75rem;
+}
+.workspace-notifications-list > :not(ul) { padding-block: .45rem; }
+.workspace-notification-row { min-height: var(--notification-row-height); }
 .workspace-notification-row + .workspace-notification-row { border-top: 1px solid var(--line); }
 .workspace-notification-title { font-weight: 400; }
 .workspace-notification-row[data-unread="true"] .workspace-notification-title { font-weight: 750; }
