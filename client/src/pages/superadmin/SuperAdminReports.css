@@ -51,7 +51,7 @@
 
 @media (min-width: 992px) {
   .system-reports .report-filter-toolbar { align-items: end; grid-template-columns: minmax(0, 1.15fr) minmax(0, 3.45fr); }
-  .system-reports .report-filter-options { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
-  .system-reports .report-filter-fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); }
-  .system-reports .report-filter-options > .btn { white-space: nowrap; }
+  .system-reports .report-filter-toolbar .filter-options { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+  .system-reports .report-filter-toolbar .filter-fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); }
+  .system-reports .report-filter-toolbar .filter-options > .btn { white-space: nowrap; }
 }

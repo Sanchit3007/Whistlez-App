@@ -6,7 +6,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import AdminSidebar from './components/AdminSidebar';
 import SuperAdminSidebar from './components/SuperAdminSidebar';
 import BrandLogo, { SidebarIcon } from './components/BrandLogo';
-import IdentityAvatar from './components/IdentityAvatar';
+import ProfileMenu from './components/ProfileMenu';
 import Topbar from './components/Topbar';
 import WorkspaceNotifications from './components/WorkspaceNotifications';
 import { ThemeProvider } from './context/ThemeContext';
@@ -114,19 +114,19 @@ const AuthenticatedWorkspace = ({ user, children }) => {
           <button
             ref={mobileMenu}
             type="button"
-            className="btn btn-light border workspace-menu"
+            className="workspace-menu workspace-sidebar-toggle"
             aria-label={mobileSidebar ? 'Close navigation' : 'Open navigation'}
             aria-expanded={mobileSidebar}
             aria-controls="workspace-sidebar"
             onClick={() => mobileSidebar ? closeMobile() : setMobileSidebar(true)}
           >
-            <i className="bi bi-list fs-4" aria-hidden="true"></i>
+            <SidebarIcon />
           </button>
           <BrandLogo imgHeight="28px" textClass="fs-5" />
         </div>
         <div className="d-flex align-items-center gap-2">
           <WorkspaceNotifications user={user} />
-          <IdentityAvatar name={user.name} identity={user._id || user.email} size={38} label={user.name || user.email || 'Signed-in profile'} />
+          <ProfileMenu user={user} />
         </div>
       </header>
 
@@ -144,13 +144,14 @@ const AuthenticatedWorkspace = ({ user, children }) => {
         <button
           ref={desktopMenu}
           type="button"
-          className="btn btn-light bg-white border rounded-3 position-fixed d-none d-lg-flex workspace-desktop-menu"
+          className="workspace-sidebar-toggle workspace-desktop-menu position-fixed d-none d-lg-flex"
           onClick={() => toggleDesktop(true)}
           title="Open navigation"
           aria-label="Open navigation"
+          aria-expanded={false}
           aria-controls="workspace-sidebar"
         >
-          <SidebarIcon size={20} className="text-dark" />
+          <SidebarIcon />
         </button>
       )}
 

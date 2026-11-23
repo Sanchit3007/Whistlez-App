@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import FilterToolbar from '../../components/FilterToolbar';
 import { useSearchParams } from 'react-router-dom';
 import FormDialog from '../../components/FormDialog';
 import AdPlacementPreview from '../../components/AdPlacementPreview';
@@ -572,17 +573,16 @@ const SuperAdminAds = () => {
 
       {/* TOOLBAR FILTERS SECTION */}
       <div className="card border-0 bg-white shadow-sm rounded-4 p-3 mb-4">
-        <div className="row g-3">
-          {/* Search bar */}
-          <label className="col-12 col-lg-4 workspace-field">
-            <span>Search campaigns</span>
-            <input type="search" className="form-control" placeholder="Campaign name or URL" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-          </label>
+        <FilterToolbar columns={3} searchField={
+            <label className="workspace-field">
+              <span>Search campaigns</span>
+              <input type="search" className="form-control" placeholder="Campaign name or URL" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            </label>
+        }>
 
-          {/* Status filter */}
-          <label className="col-12 col-sm-4 col-lg-2 workspace-field">
+          <label className="workspace-field">
             <span>Status</span>
-            <select 
+            <select
               className="form-select"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -595,10 +595,9 @@ const SuperAdminAds = () => {
             </select>
           </label>
 
-          {/* Placement filter */}
-          <label className="col-12 col-sm-4 col-lg-3 workspace-field">
+          <label className="workspace-field">
             <span>Placement</span>
-            <select 
+            <select
               className="form-select"
               value={placementFilter}
               onChange={(e) => setPlacementFilter(e.target.value)}
@@ -610,10 +609,9 @@ const SuperAdminAds = () => {
             </select>
           </label>
 
-          {/* Targeting Filter */}
-          <label className="col-12 col-sm-4 col-lg-3 workspace-field">
+          <label className="workspace-field">
             <span>Targeting</span>
-            <select 
+            <select
               className="form-select"
               value={targetFilter}
               onChange={(e) => setTargetFilter(e.target.value)}
@@ -623,7 +621,7 @@ const SuperAdminAds = () => {
               <option value="REGIONAL">Regional Only</option>
             </select>
           </label>
-        </div>
+        </FilterToolbar>
       </div>
 
       {/* ADVERTISEMENT LIST (GRID LAYOUT) */}

@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
+import FilterToolbar from '../../components/FilterToolbar';
 import FormDialog from '../../components/FormDialog';
 import UnsavedChanges from '../../components/UnsavedChanges';
 import { useAuth, api } from '../../context/AuthContext';
@@ -317,9 +318,11 @@ const AdminTimeSlots = () => {
           </div>
           <div className="slot-date-tools">
             <button type="button" className="btn btn-outline-primary" onClick={() => setSelectedDate(getToday())} disabled={savingSlot}>Today</button>
-            <input type="date" className="form-control" aria-label="Time slot date" value={selectedDate} disabled={savingSlot} onChange={event => {
-              if (event.target.value) setSelectedDate(event.target.value);
-            }} />
+            <FilterToolbar>
+              <input type="date" className="form-control" aria-label="Time slot date" value={selectedDate} disabled={savingSlot} onChange={event => {
+                if (event.target.value) setSelectedDate(event.target.value);
+              }} />
+            </FilterToolbar>
           </div>
         </div>
         <dl className="slot-summary mb-0">

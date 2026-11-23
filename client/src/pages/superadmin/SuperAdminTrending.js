@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
+import FilterToolbar from '../../components/FilterToolbar';
 import { Link, useSearchParams } from 'react-router-dom';
 import FormDialog from '../../components/FormDialog';
 import UploadField from '../../components/UploadField';
@@ -686,21 +687,22 @@ const SuperAdminTrending = () => {
       {activeTab === 'topics' && (
         <div className="card border-0 shadow-sm rounded-4 p-3 p-md-4 bg-white">
           {/* Filters Row */}
-          <div className="row g-2 mb-4">
-            <label className="col-12 col-lg-4 workspace-field">
-              <span>Search topics</span>
-              <input 
-                ref={topicsSearch}
-                type="search"
-                className="form-control"
-                placeholder="Title or heading"
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-              />
-            </label>
-            <label className="col-6 col-lg-2 workspace-field">
+          <FilterToolbar className="mb-4" columns={4} searchField={
+              <label className="workspace-field">
+                <span>Search topics</span>
+                <input
+                  ref={topicsSearch}
+                  type="search"
+                  className="form-control"
+                  placeholder="Title or heading"
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                />
+              </label>
+          }>
+            <label className="workspace-field">
               <span>Category</span>
-              <select 
+              <select
                 className="form-select"
                 value={filterCategory}
                 onChange={(e) => { setFilterCategory(e.target.value); setCurrentPage(1); }}
@@ -709,9 +711,9 @@ const SuperAdminTrending = () => {
                 {categoriesList.map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </label>
-            <label className="col-6 col-lg-2 workspace-field">
+            <label className="workspace-field">
               <span>Status</span>
-              <select 
+              <select
                 className="form-select"
                 value={filterStatus}
                 onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
@@ -725,9 +727,9 @@ const SuperAdminTrending = () => {
                 <option value="inactive">Inactive</option>
               </select>
             </label>
-            <label className="col-6 col-lg-2 workspace-field">
+            <label className="workspace-field">
               <span>Ranking type</span>
-              <select 
+              <select
                 className="form-select"
                 value={filterRankingType}
                 onChange={(e) => { setFilterRankingType(e.target.value); setCurrentPage(1); }}
@@ -738,9 +740,9 @@ const SuperAdminTrending = () => {
                 <option value="random">Random</option>
               </select>
             </label>
-            <label className="col-6 col-lg-2 workspace-field">
+            <label className="workspace-field">
               <span>Sort by</span>
-              <select 
+              <select
                 className="form-select"
                 value={sortField}
                 onChange={(e) => setSortField(e.target.value)}
@@ -751,7 +753,7 @@ const SuperAdminTrending = () => {
                 <option value="newest">Sort by Newest</option>
               </select>
             </label>
-          </div>
+          </FilterToolbar>
 
           {/* Bulk Action Bar */}
           {selectedIds.length > 0 && (
@@ -1105,18 +1107,20 @@ const SuperAdminTrending = () => {
       {/* --- TAB CONTENT 4: SCHEDULES --- */}
       {activeTab === 'schedule' && (
         <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
-          <div className="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+          <div className="d-flex flex-wrap gap-2 justify-content-between align-items-center border-bottom pb-3 mb-4">
             <div>
               <h5 className="fw-black text-dark mb-0">Upcoming & Active Schedules</h5>
               <span className="text-muted small">Timeline views of date-bound trending topics</span>
             </div>
-            <input aria-label="Schedule date" 
-              type="date"
-              className="form-control form-control-sm"
-              style={{ width: '160px' }}
-              value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
-            />
+            <FilterToolbar summary={filterDate}>
+              <input aria-label="Schedule date"
+                type="date"
+                className="form-control form-control-sm"
+                style={{ width: '160px' }}
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+              />
+            </FilterToolbar>
           </div>
 
           <div className="table-responsive">

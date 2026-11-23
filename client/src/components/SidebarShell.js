@@ -25,8 +25,8 @@ const SidebarShell = ({ role, roleLabel, home, sections, showMobile, isOpen = tr
           <NavLink className="sidebar-brand" to={home} onClick={onNavigate}>
             <BrandLogo imgHeight="34px" textClass="fs-4" />
           </NavLink>
-          <button ref={closeButtonRef} type="button" className="sidebar-close-btn" onClick={onClose} aria-label="Close navigation" title="Close navigation">
-            <SidebarIcon size={18} />
+          <button ref={closeButtonRef} type="button" className="sidebar-close-btn workspace-sidebar-toggle" onClick={onClose} aria-label="Close navigation" title="Close navigation">
+            <SidebarIcon />
           </button>
         </div>
 

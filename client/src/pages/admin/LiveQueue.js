@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
+import FilterToolbar from '../../components/FilterToolbar';
 import { Link, useSearchParams } from 'react-router-dom';
 import socket from '../../socket';
 import { api } from '../../context/AuthContext';
@@ -502,15 +503,17 @@ const LiveQueue = ({ counterDisplay = false }) => {
         </div>
 
         <div className="workspace-actions">
-          <label className="workspace-field">
-            <span>Queue date</span>
-            <input 
-              type="date" 
-              className="form-control"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-            />
-          </label>
+          <FilterToolbar summary={selectedDate}>
+            <label className="workspace-field">
+              <span>Queue date</span>
+              <input
+                type="date"
+                className="form-control"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+              />
+            </label>
+          </FilterToolbar>
 
           <button 
             className="btn btn-primary workspace-primary"

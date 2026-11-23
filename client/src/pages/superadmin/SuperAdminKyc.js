@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import FilterToolbar from '../../components/FilterToolbar';
 import { useSearchParams } from 'react-router-dom';
 import FormDialog from '../../components/FormDialog';
 import { api } from '../../context/AuthContext';
@@ -282,8 +283,8 @@ const SuperAdminKyc = () => {
     listPosition.current = null;
     const row = Array.from(listRef.current?.querySelectorAll('[data-kyc-open]') || [])
       .find(button => button.dataset.kycOpen === id && button.getClientRects().length);
-    const focusedFilter = listRef.current?.querySelector('#kyc-status-filter');
-    (row || focusedFilter)?.focus({ preventScroll: true });
+    const searchInput = listRef.current?.querySelector('input[type="search"]');
+    (row || searchInput)?.focus({ preventScroll: true });
     if (scroll) scroll.scrollTop = top;
     window.scrollTo(x, y);
   }, [selectedKyc, loading]);
@@ -377,11 +378,12 @@ const SuperAdminKyc = () => {
       ) : !selectedKyc ? (
         <section ref={listRef} className="card kyc-application-list" aria-label="KYC applications">
           <div className="kyc-list-toolbar">
-            <div className="kyc-search-fields">
+            <FilterToolbar columns={activeFilter === 'history' ? 2 : 1} searchField={
               <label className="workspace-field">
                 <span>Search by business or owner name</span>
                 <input type="search" className="form-control" value={search} onChange={event => setSearch(event.target.value)} />
               </label>
+            }>
               <label className="workspace-field">
                 <span>Application status</span>
                 <select id="kyc-status-filter" className="form-select" value={activeFilter} onChange={event => {
@@ -405,8 +407,8 @@ const SuperAdminKyc = () => {
                   </select>
                 </label>
               )}
-              <p className="kyc-results-count" role="status">{displayedRequests.length} {displayedRequests.length === 1 ? 'application' : 'applications'}</p>
-            </div>
+            </FilterToolbar>
+            <p className="kyc-results-count" role="status">{displayedRequests.length} {displayedRequests.length === 1 ? 'application' : 'applications'}</p>
           </div>
           {displayedRequests.length ? (
             <>

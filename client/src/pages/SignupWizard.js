@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import PasswordField from '../components/PasswordField';
 
 const SignupWizard = () => {
   const navigate = useNavigate();
@@ -390,11 +391,11 @@ const SignupWizard = () => {
                     />
                   </div>
                   <div className="col-md-6">
-                    <label className="form-label small fw-semibold text-muted">Create Password *</label>
-                    <input
-                      type="password"
+                    <label htmlFor="signupPassword" className="form-label small fw-semibold text-muted">Create Password *</label>
+                    <PasswordField
+                      id="signupPassword"
                       name="password"
-                      className="form-control form-control-custom"
+                      autoComplete="new-password"
                       placeholder="Min. 6 characters"
                       value={formData.password}
                       onChange={handleInputChange}
@@ -402,11 +403,12 @@ const SignupWizard = () => {
                     />
                   </div>
                   <div className="col-md-6">
-                    <label className="form-label small fw-semibold text-muted">Confirm Password *</label>
-                    <input
-                      type="password"
+                    <label htmlFor="signupConfirmPassword" className="form-label small fw-semibold text-muted">Confirm Password *</label>
+                    <PasswordField
+                      id="signupConfirmPassword"
                       name="confirmPassword"
-                      className="form-control form-control-custom"
+                      label="password confirmation"
+                      autoComplete="new-password"
                       placeholder="Repeat password"
                       value={formData.confirmPassword}
                       onChange={handleInputChange}

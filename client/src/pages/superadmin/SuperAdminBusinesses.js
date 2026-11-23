@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import FilterToolbar from '../../components/FilterToolbar';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import socket from '../../socket';
 import { api } from '../../context/AuthContext';
@@ -147,20 +148,21 @@ const SuperAdminBusinesses = () => {
 
       {/* Search Header */}
       <div className="card p-3 p-md-4 mb-4">
-        <div className="workspace-filters business-filters">
-          <label className="workspace-field business-search">
-            <span>Search businesses</span>
-            <input 
-              type="search"
-              className="form-control"
-              placeholder="Business name or domain"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </label>
+        <FilterToolbar columns={2} searchField={
+            <label className="workspace-field">
+              <span>Search businesses</span>
+              <input
+                type="search"
+                className="form-control"
+                placeholder="Business name or domain"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </label>
+        }>
           <label className="workspace-field">
             <span>Registration period</span>
-            <select 
+            <select
               className="form-select"
               value={timeFilter}
               onChange={(e) => setTimeFilter(e.target.value)}
@@ -172,7 +174,7 @@ const SuperAdminBusinesses = () => {
           </label>
           <label className="workspace-field">
             <span>KYC status</span>
-            <select 
+            <select
               className="form-select"
               value={kycFilter}
               onChange={(e) => setKycFilter(e.target.value)}
@@ -184,7 +186,7 @@ const SuperAdminBusinesses = () => {
               <option value="Rejected">Rejected</option>
             </select>
           </label>
-        </div>
+        </FilterToolbar>
       </div>
 
       {/* Grid of Business Cards */}

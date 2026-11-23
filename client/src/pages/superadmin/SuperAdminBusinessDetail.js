@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useEffect } from 'react';
+import FilterToolbar from '../../components/FilterToolbar';
 import { useParams, useNavigate } from 'react-router-dom';
 import socket from '../../socket';
 import { api } from '../../context/AuthContext';
@@ -297,49 +298,50 @@ const SuperAdminBusinessDetail = () => {
             </div>
 
             <div className="card border-0 p-4 bg-white shadow-sm rounded-4">
-              <div className="d-flex justify-content-between align-items-center mb-4">
+              <div className="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-4">
                 <h5 className="fw-bold text-dark mb-0">
                   <i className="bi bi-bar-chart-line text-primary me-2"></i> Token Analytics
                 </h5>
-                {/* Arrow navigators to switch Daily, Weekly, Monthly, Yearly */}
-                {(() => {
-                  const periods = ['daily', 'weekly', 'monthly', 'yearly'];
-                  const currentIdx = periods.indexOf(analyticsFilter);
-                  const handlePrev = () => {
-                    const prevIdx = (currentIdx - 1 + periods.length) % periods.length;
-                    setAnalyticsFilter(periods[prevIdx]);
-                  };
-                  const handleNext = () => {
-                    const nextIdx = (currentIdx + 1) % periods.length;
-                    setAnalyticsFilter(periods[nextIdx]);
-                  };
-                  const primaryColor = business?.primaryColor || 'var(--accent)';
-                  return (
-                    <div className="d-flex align-items-center gap-2">
-                      <button 
-                        type="button" 
-                        className="btn btn-sm btn-light border-0 rounded-circle d-flex align-items-center justify-content-center shadow-sm"
-                        style={{ width: '28px', height: '28px', color: primaryColor }}
-                        onClick={handlePrev}
-                        title="Previous period"
-                      >
-                        <i className="bi bi-chevron-left fw-bold"></i>
-                      </button>
-                      <strong className="text-dark text-capitalize font-outfit" style={{ fontSize: '0.85rem', minWidth: '70px', textAlign: 'center' }}>
-                        {analyticsFilter}
-                      </strong>
-                      <button 
-                        type="button" 
-                        className="btn btn-sm btn-light border-0 rounded-circle d-flex align-items-center justify-content-center shadow-sm"
-                        style={{ width: '28px', height: '28px', color: primaryColor }}
-                        onClick={handleNext}
-                        title="Next period"
-                      >
-                        <i className="bi bi-chevron-right fw-bold"></i>
-                      </button>
-                    </div>
-                  );
-                })()}
+                <FilterToolbar summary={analyticsFilter}>
+                  {(() => {
+                    const periods = ['daily', 'weekly', 'monthly', 'yearly'];
+                    const currentIdx = periods.indexOf(analyticsFilter);
+                    const handlePrev = () => {
+                      const prevIdx = (currentIdx - 1 + periods.length) % periods.length;
+                      setAnalyticsFilter(periods[prevIdx]);
+                    };
+                    const handleNext = () => {
+                      const nextIdx = (currentIdx + 1) % periods.length;
+                      setAnalyticsFilter(periods[nextIdx]);
+                    };
+                    const primaryColor = business?.primaryColor || 'var(--accent)';
+                    return (
+                      <div className="d-flex align-items-center gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-light border-0 rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                          style={{ width: '28px', height: '28px', color: primaryColor }}
+                          onClick={handlePrev}
+                          title="Previous period"
+                        >
+                          <i className="bi bi-chevron-left fw-bold"></i>
+                        </button>
+                        <strong className="text-dark text-capitalize font-outfit" style={{ fontSize: '0.85rem', minWidth: '70px', textAlign: 'center' }}>
+                          {analyticsFilter}
+                        </strong>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-light border-0 rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                          style={{ width: '28px', height: '28px', color: primaryColor }}
+                          onClick={handleNext}
+                          title="Next period"
+                        >
+                          <i className="bi bi-chevron-right fw-bold"></i>
+                        </button>
+                      </div>
+                    );
+                  })()}
+                </FilterToolbar>
               </div>
               
               {/* Token analytics chart */}

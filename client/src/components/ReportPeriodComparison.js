@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useState } from 'react';
 import { api } from '../context/AuthContext';
 import { BarTrend } from './Charts';
+import FilterToolbar from './FilterToolbar';
 
 const dayMs = 86400000;
 const dateKey = timestamp => new Date(timestamp).toISOString().slice(0, 10);
@@ -63,12 +64,14 @@ const ReportPeriodComparison = ({ queue = false, compact = false }) => {
           <h2 id={titleId} className="h5 mb-1">{queue ? 'Average wait comparison' : 'Business registrations comparison'}</h2>
           <p className="small text-muted mb-0">{queue ? 'Average time from ticket creation to first call' : 'New businesses registered'} · Complete days in UTC</p>
         </div>
-        <label className="workspace-field">
-          <span>Comparison period</span>
-          <select className="form-select" value={days} onChange={event => setDays(Number(event.target.value))}>
-            <option value="7">Last 7 days</option><option value="30">Last 30 days</option>
-          </select>
-        </label>
+        <FilterToolbar summary={`Last ${days} days`}>
+          <label className="workspace-field">
+            <span>Comparison period</span>
+            <select className="form-select" value={days} onChange={event => setDays(Number(event.target.value))}>
+              <option value="7">Last 7 days</option><option value="30">Last 30 days</option>
+            </select>
+          </label>
+        </FilterToolbar>
       </div>
       {error ? (
         <div className="d-flex flex-wrap align-items-center gap-2">

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import FilterToolbar from '../../components/FilterToolbar';
 import FormDialog from '../../components/FormDialog';
 import LiveStatus from '../../components/LiveStatus';
 import socket from '../../socket';
@@ -187,11 +188,13 @@ const SuperAdminLiveMobile = () => {
                     {test ? (test.usesSamples ? 'Sample feed' : 'Test mode') : 'Live preview'}
                   </span>
                 </div>
-                <div className="trend-categories" role="group" aria-label="Trending categories">
-                  {feedCategories.map(option => (
-                    <button type="button" key={option} ref={option === 'All' ? allCategoriesButton : undefined} aria-pressed={category === option} onClick={() => setCategory(option)}>{option}</button>
-                  ))}
-                </div>
+                <FilterToolbar className="trend-category-filter" summary={category}>
+                  <div className="trend-categories" role="group" aria-label="Trending categories">
+                    {feedCategories.map(option => (
+                      <button type="button" key={option} ref={option === 'All' ? allCategoriesButton : undefined} aria-pressed={category === option} onClick={() => setCategory(option)}>{option}</button>
+                    ))}
+                  </div>
+                </FilterToolbar>
               </header>
               <div className="trend-feed-body">
                 {!test && feed.error && (
@@ -221,7 +224,9 @@ const SuperAdminLiveMobile = () => {
                       <h3>No topics in {category}</h3>
                       <button type="button" className="btn btn-outline-primary" onClick={() => {
                         setCategory('All');
-                        allCategoriesButton.current?.focus();
+                        const allButton = allCategoriesButton.current;
+                        const focusTarget = allButton?.getClientRects().length ? allButton : previewHeading.current;
+                        focusTarget?.focus();
                       }}>View all topics</button>
                     </div>
                   ) : (

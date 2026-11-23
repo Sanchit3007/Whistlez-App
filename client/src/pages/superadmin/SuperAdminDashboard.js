@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
+import FilterToolbar from '../../components/FilterToolbar';
 import { Link, useNavigate } from 'react-router-dom';
 import socket from '../../socket';
 import { api } from '../../context/AuthContext';
@@ -322,18 +323,20 @@ const SuperAdminDashboard = () => {
           <div className="card border-0 p-3 p-md-4 bg-white shadow-sm rounded-4 h-100">
             <div className="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-4">
               <h2 className="dash-card-title">Business registrations</h2>
-              <select 
-                className="form-select form-select-sm" 
-                style={{ width: '120px' }}
-                value={growthFilter}
-                aria-label="Growth reporting period"
-                onChange={(e) => setGrowthFilter(e.target.value)}
-              >
-                <option value="Daily">Daily</option>
-                <option value="Weekly">Weekly</option>
-                <option value="Monthly">Monthly</option>
-                <option value="Yearly">Yearly</option>
-              </select>
+              <FilterToolbar summary={growthFilter}>
+                <select
+                  className="form-select form-select-sm"
+                  style={{ width: '120px' }}
+                  value={growthFilter}
+                  aria-label="Growth reporting period"
+                  onChange={(e) => setGrowthFilter(e.target.value)}
+                >
+                  <option value="Daily">Daily</option>
+                  <option value="Weekly">Weekly</option>
+                  <option value="Monthly">Monthly</option>
+                  <option value="Yearly">Yearly</option>
+                </select>
+              </FilterToolbar>
             </div>
             
             <BarTrend

@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
+import FilterToolbar from '../../components/FilterToolbar';
 import { Link } from 'react-router-dom';
 import socket from '../../socket';
 import { api } from '../../context/AuthContext';
@@ -227,15 +228,17 @@ const AdminDashboard = () => {
             stale={Boolean(error)} refreshing={refreshing} onRetry={fetchDashboardData} />
         </div>
         <div className="workspace-actions">
-          <label className="workspace-field">
-            <span>Queue date</span>
-            <input
-              type="date"
-              className="form-control"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-            />
-          </label>
+          <FilterToolbar summary={selectedDate}>
+            <label className="workspace-field">
+              <span>Queue date</span>
+              <input
+                type="date"
+                className="form-control"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+              />
+            </label>
+          </FilterToolbar>
           <Link to="/admin/live-queue" className="btn btn-primary workspace-primary">
             Open Live Queue <i className="bi bi-arrow-right" aria-hidden="true"></i>
           </Link>

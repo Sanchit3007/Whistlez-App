@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import FilterToolbar from '../../components/FilterToolbar';
 import socket from '../../socket';
 import { api } from '../../context/AuthContext';
 import IdentityAvatar from '../../components/IdentityAvatar';
@@ -72,18 +73,19 @@ const SuperAdminUsers = () => {
       </div>
 
       <div className="card border-0 p-3 p-md-4 bg-white shadow-sm rounded-4">
-        <div className="workspace-filters business-filters mb-4">
-          <label className="workspace-field business-search">
-            <span>Search users</span>
-            <input 
-              type="search"
-              className="form-control"
-              placeholder="Name or email"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+        <FilterToolbar className="mb-4" columns={2} searchField={
+            <label className="workspace-field">
+              <span>Search users</span>
+              <input
+                type="search"
+                className="form-control"
+                placeholder="Name or email"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
 
-          </label>
+            </label>
+        }>
           <label className="workspace-field">
             <span>Role</span>
             <select
@@ -109,7 +111,7 @@ const SuperAdminUsers = () => {
               <option value="month">This Month</option>
             </select>
           </label>
-        </div>
+        </FilterToolbar>
 
         <div className="table-responsive">
           <table className="table table-hover align-middle">

@@ -106,27 +106,6 @@ h1, h2, h3, h4, h5, h6 {
   text-decoration: none;
 }
 
-.sidebar-close-btn {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  border-radius: 50%;
-  border: none;
-  background-color: #f1f5f9;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
-  padding: 0;
-}
-
-.sidebar-close-btn:hover {
-  background-color: #e2e8f0;
-  color: #0f172a;
-}
-
 .sidebar-menu {
   list-style: none;
   padding: 0;
