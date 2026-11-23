@@ -33,7 +33,8 @@
 .workspace-notifications-heading { padding: .65rem .75rem; border-bottom: 1px solid var(--line); }
 .workspace-notifications-list { max-height: min(16rem, 42dvh); overflow-y: auto; overscroll-behavior: contain; padding: .45rem .75rem; }
 .workspace-notification-row + .workspace-notification-row { border-top: 1px solid var(--line); }
-.workspace-notification-row > .btn { flex-shrink: 0; }
+.workspace-notification-title { font-weight: 400; }
+.workspace-notification-row[data-unread="true"] .workspace-notification-title { font-weight: 750; }
 .workspace-notification-link {
   display: flex;
   align-items: center;
@@ -43,6 +44,7 @@
   color: var(--ink);
 }
 .workspace-notification-link:hover { color: var(--accent); }
+.workspace-notification-time { display: block; font-size: .72rem; }
 
 @media (max-width: 991.98px) {
   .mobile-admin-header .workspace-notifications-card { inset-inline-end: -46px; }

@@ -54,6 +54,49 @@
 }
 .kyc-mobile-details .kyc-date-age { display: inline; margin-inline-start: .5rem; }
 
+.kyc-review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .65rem 1rem;
+  padding: clamp(.85rem, 2vw, 1.25rem);
+  border-bottom: 1px solid var(--line);
+}
+.kyc-review-header h2 {
+  margin: 0 0 .4rem;
+  color: var(--ink);
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  font-weight: 750;
+}
+.kyc-review-meta, .kyc-documents-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .35rem .75rem;
+  color: var(--ink-2);
+  font-size: .85rem;
+}
+.kyc-documents-heading { justify-content: space-between; margin-bottom: .75rem; }
+.kyc-review-card .kyc-review-grid { padding: clamp(.75rem, 2vw, 1.2rem); }
+.kyc-review-card .kyc-documents { grid-row: auto; }
+.kyc-review-card .kyc-review-decision {
+  grid-column: 1 / -1;
+  border-top: 2px solid var(--accent);
+}
+.kyc-review-decision form { max-width: 42rem; }
+.kyc-business-facts { display: grid; margin: 0; }
+.kyc-business-facts > div {
+  display: grid;
+  grid-template-columns: minmax(0, .75fr) minmax(0, 1.25fr);
+  padding: .5rem 0;
+  gap: .2rem .75rem;
+  border-top: 1px solid var(--line);
+  font-size: .875rem;
+}
+.kyc-business-facts dt { color: var(--ink-2); font-weight: 500; }
+.kyc-business-facts dd { margin: 0; color: var(--ink); }
+
 .kyc-document-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
@@ -75,6 +118,31 @@
 }
 
 .kyc-document-choice small { color: var(--ink-2); white-space: nowrap; }
+.kyc-document-choice > span { min-width: 0; }
+.kyc-document-choice .kyc-document-status {
+  padding: .15rem .35rem;
+  border-radius: var(--r-sm);
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.kyc-document-missing {
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  color: var(--ink-2);
+}
+.kyc-document-missing .kyc-document-status { color: var(--warn); background: var(--warn-soft); }
+.kyc-documents-empty {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .75rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-sm);
+  background: var(--canvas);
+  color: var(--ink-2);
+  font-size: .875rem;
+}
+.kyc-documents-empty .bi { color: var(--accent); }
 .kyc-preview-actions { margin-top: .75rem; }
 
 .kyc-workspace .kyc-document-preview { min-height: clamp(10rem, 30svh, 18rem); }
@@ -83,21 +151,52 @@
   max-height: 65svh;
 }
 
-.kyc-preview-dialog .modal-body {
+.portal-form-dialog.kyc-preview-dialog[open] .modal-content {
+  display: flex;
+  flex-direction: column;
+  height: min(82dvh, 52rem);
+}
+.kyc-viewer-nav, .kyc-viewer-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .35rem .55rem;
+  padding: .55rem clamp(.6rem, 2vw, 1rem);
+  border-bottom: 1px solid var(--line);
+}
+.kyc-viewer-nav { justify-content: space-between; }
+.kyc-viewer-tools :is(button, a), .kyc-viewer-nav button { min-height: 44px; }
+.kyc-viewer-tools button { min-width: 44px; }
+.kyc-viewer-tools output { min-width: 2.6rem; text-align: center; font-variant-numeric: tabular-nums; }
+.kyc-viewer-scroll {
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
   background: var(--canvas);
 }
-
-.kyc-preview-dialog img { display: block; width: 100%; margin-inline: auto; }
+.kyc-viewer-sheet {
+  position: relative;
+  margin-inline: auto;
+  width: calc(min(100%, 37rem) * var(--kyc-zoom));
+}
+.kyc-viewer-sheet img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: block;
+  object-fit: contain;
+}
 .kyc-preview-close { min-width: 44px; min-height: 44px; }
 
 @media (max-width: 575.98px) {
   .kyc-search-fields > .workspace-field { flex-basis: 100%; max-width: none; }
   .kyc-search-fields :is(input, select) { font-size: 1rem; }
   .kyc-results-count { margin: 0; }
+  .portal-form-dialog.kyc-preview-dialog[open] .modal-content { height: 100%; }
+  .kyc-preview-actions > .btn { flex: 1 1 auto; }
+  .kyc-preview-dialog .modal-header { flex-wrap: nowrap; }
 }
 
-@media (min-width: 1100px) {
+@media (min-width: 992px) {
   .kyc-workspace .kyc-review-grid { grid-template-columns: minmax(0, .8fr) minmax(0, 1.4fr); }
 }

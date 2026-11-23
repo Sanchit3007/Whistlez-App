@@ -1,10 +1,11 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import socket from '../../socket';
 import { api } from '../../context/AuthContext';
 import { BarTrend } from '../../components/Charts';
 import StatCard from '../../components/StatCard';
 import IdentityAvatar from '../../components/IdentityAvatar';
+import LiveStatus from '../../components/LiveStatus';
 import { needsKycReview, PENDING_VERIFICATION } from '../../utils/businessStatus';
 
 const SuperAdminDashboard = () => {
@@ -17,15 +18,25 @@ const SuperAdminDashboard = () => {
   const [error, setError] = useState('');
   const [growthFilter, setGrowthFilter] = useState('Weekly');
   const [trendingData, setTrendingData] = useState(null);
+  const [updatedAt, setUpdatedAt] = useState(null);
+  const [refreshing, setRefreshing] = useState(true);
+  const activeRequest = useRef(null);
 
   const fetchDashboardData = useCallback(async () => {
+    activeRequest.current?.abort();
+    const request = new AbortController();
+    activeRequest.current = request;
+    const config = { signal: request.signal };
+    setRefreshing(true);
     try {
       const [metricsRes, bizRes, usersRes, trendingRes] = await Promise.all([
-        api.get('/superadmin/metrics'),
-        api.get('/superadmin/businesses'),
-        api.get('/superadmin/users'),
-        api.get('/trending').catch(() => ({ data: { success: false } }))
+        api.get('/superadmin/metrics', config),
+        api.get('/superadmin/businesses', config),
+        api.get('/superadmin/users', config),
+        api.get('/trending', config).catch(() => ({ data: { success: false } }))
       ]);
+      if (request.signal.aborted) return;
+      if (![metricsRes, bizRes, usersRes].every(response => response.data.success)) throw new Error('Incomplete dashboard response.');
 
       if (metricsRes.data.success) {
         setMetrics(metricsRes.data.metrics);
@@ -41,32 +52,42 @@ const SuperAdminDashboard = () => {
         setUsers(usersRes.data.users.slice(0, 5)); // show top 5
       }
       setError('');
+      setUpdatedAt(new Date());
     } catch (err) {
+      if (request.signal.aborted) return;
       console.error('Error fetching dashboard details', err);
       setError('Could not retrieve super admin dashboard statistics.');
     } finally {
-      setLoading(false);
+      if (!request.signal.aborted) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     fetchDashboardData();
+    return () => activeRequest.current?.abort();
   }, [fetchDashboardData]);
 
   // Socket listener for real-time superadmin updates
   useEffect(() => {
     const joinSuperAdmin = () => socket.emit('joinSuperAdmin');
+    const reconnect = () => {
+      joinSuperAdmin();
+      fetchDashboardData();
+    };
     const updateEvents = [
       'metricsUpdated', 'businessesUpdated', 'usersUpdated', 'trendingUpdated',
       'trendingRotationUpdated', 'trendingRankingsRecalculated',
     ];
 
     if (socket.connected) joinSuperAdmin();
-    socket.on('connect', joinSuperAdmin);
+    socket.on('connect', reconnect);
     updateEvents.forEach(event => socket.on(event, fetchDashboardData));
 
     return () => {
-      socket.off('connect', joinSuperAdmin);
+      socket.off('connect', reconnect);
       updateEvents.forEach(event => socket.off(event, fetchDashboardData));
     };
   }, [fetchDashboardData]);
@@ -215,6 +236,7 @@ const SuperAdminDashboard = () => {
         <div>
           <h1 className="fw-extrabold text-dark mb-1">Platform overview</h1>
           <p className="text-muted mb-0">Monitor registered businesses, accounts, and campaigns.</p>
+          <LiveStatus updatedAt={updatedAt} stale={Boolean(error)} refreshing={refreshing} onRetry={fetchDashboardData} />
         </div>
         <div className="workspace-actions">
           <Link to="/superadmin/kyc" className="btn btn-primary workspace-primary">
@@ -222,12 +244,6 @@ const SuperAdminDashboard = () => {
           </Link>
         </div>
       </div>
-
-      {error && (
-        <div className="alert alert-danger border-0 rounded-3 small mb-4">
-          {error}
-        </div>
-      )}
 
       {/* Stats row */}
       <div className="row g-3 mb-4">

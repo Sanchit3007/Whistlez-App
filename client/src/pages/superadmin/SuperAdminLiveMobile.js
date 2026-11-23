@@ -153,7 +153,8 @@ const SuperAdminLiveMobile = () => {
         <aside className="trend-feed-status" aria-labelledby="trend-status-title">
           <div className="trend-status-heading">
             <h2 id="trend-status-title">Feed status</h2>
-            <LiveStatus updatedAt={feed.updatedAt} stale={feed.error} />
+            <LiveStatus updatedAt={feed.updatedAt} stale={feed.error}
+              refreshing={refreshing} onRetry={feed.error ? undefined : refreshFeed} />
           </div>
           <dl className="trend-status-metrics">
             <div><dt>Live topics</dt><dd>{feed.updatedAt ? feed.topics.length : '—'}</dd></div>

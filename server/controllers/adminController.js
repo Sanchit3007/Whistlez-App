@@ -5,6 +5,7 @@ const Token = require('../models/Token');
 const TimeSlot = require('../models/TimeSlot');
 const QRCode = require('qrcode');
 const { uploadToCloudinary, isCloudinaryConfigured, sendMediaUploadError } = require('../config/cloudinary');
+const { recordKycActivity } = require('../utils/kycActivity');
 
 // Helper to generate a collision-resistant unique code: WHZ-QR-XXXX-XXXX
 const generateUniqueCode = () => {
@@ -696,7 +697,7 @@ const submitKyc = async (req, res) => {
       documents // array of { docType, fileBase64 }
     } = req.body;
 
-    const business = await Business.findById(businessId);
+    const business = await Business.findById(businessId).select('+kycActivity');
     if (!business) {
       return res.status(404).json({ success: false, message: 'Business not found' });
     }
@@ -744,6 +745,7 @@ const submitKyc = async (req, res) => {
       rejectionReason: null
     };
 
+    recordKycActivity(business, 'Submitted');
     business.kycStatus = 'Submitted';
     await business.save();
 
@@ -752,10 +754,12 @@ const submitKyc = async (req, res) => {
       io.to('superadmin').emit('kycSubmitted', { businessId: business._id });
     }
 
+    const profile = business.toObject();
+    delete profile.kycActivity;
     res.json({
       success: true,
       message: 'KYC submitted successfully',
-      business
+      business: profile
     });
   } catch (error) {
     if (sendMediaUploadError(res, error)) return;
@@ -794,9 +798,22 @@ const createTimeSlot = async (req, res) => {
 const getTimeSlots = async (req, res) => {
   try {
     const businessId = req.user.businessId;
-    const { date } = req.query;
+    const { date, next, fromDate, fromTime = '00:00' } = req.query;
 
     const query = { providerId: businessId };
+    if (next === 'true') {
+      if (!businessId || typeof fromDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fromDate) ||
+          !Number.isFinite(Date.parse(fromDate)) || typeof fromTime !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(fromTime)) {
+        return res.status(400).json({ success: false, message: 'Choose a valid date and time to find the next available slot.' });
+      }
+      const slot = await TimeSlot.findOne({
+        ...query,
+        isActive: { $ne: false },
+        $expr: { $lt: [{ $ifNull: ['$bookedCount', 0] }, '$maxCapacity'] },
+        $or: [{ date: { $gt: fromDate } }, { date: fromDate, endTime: { $gt: fromTime } }]
+      }).sort({ date: 1, startTime: 1 });
+      return res.json({ success: true, slot });
+    }
     if (date) query.date = date;
 
     const slots = await TimeSlot.find(query).sort({ startTime: 1 });

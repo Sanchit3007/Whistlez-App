@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import FormDialog from '../../components/FormDialog';
+import AdPlacementPreview from '../../components/AdPlacementPreview';
 import UploadField from '../../components/UploadField';
 import socket from '../../socket';
 import { api } from '../../context/AuthContext';
@@ -385,12 +386,11 @@ const SuperAdminAds = () => {
     }
   };
 
-  const handleTogglePlacement = (placementLabel) => {
-    if (adPositions.includes(placementLabel)) {
-      setAdPositions(adPositions.filter(p => p !== placementLabel));
-    } else {
-      setAdPositions([...adPositions, placementLabel]);
-    }
+  const handleTogglePlacement = (placement) => {
+    const matches = value => value === placement.id || value === placement.label;
+    setAdPositions(current => current.some(matches)
+      ? current.filter(value => !matches(value))
+      : [...current, placement.label]);
   };
 
   const toggleExpandLocations = (adId) => {
@@ -900,7 +900,7 @@ const SuperAdminAds = () => {
                               type="button"
                               aria-pressed={isChecked}
                               className="campaign-choice d-flex align-items-center justify-content-between gap-2 text-start"
-                              onClick={() => handleTogglePlacement(placement.label)}
+                              onClick={() => handleTogglePlacement(placement)}
                             >
                               <span className="small fw-bold text-dark">{placement.label}</span>
                               <span
@@ -1092,6 +1092,7 @@ const SuperAdminAds = () => {
                 </div>
               </div>
 
+              <AdPlacementPreview image={adFile || existingBanner} positions={adPositions} />
               <section className="portal-form-summary mt-4" aria-labelledby="campaign-review-title">
                 <h3 id="campaign-review-title" className="portal-form-section-title"><i className="bi bi-calendar-week portal-form-icon" aria-hidden="true" /> Schedule preview</h3>
                 <div className="workspace-filters mb-2">

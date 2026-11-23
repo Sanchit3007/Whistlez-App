@@ -44,7 +44,10 @@ const AdminTimeSlots = () => {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(getToday);
   const [schedule, setSchedule] = useState(null);
+  const [availability, setAvailability] = useState(null);
   const scheduleRequest = useRef(null);
+  const slotList = useRef(null);
+  const pendingSlotJump = useRef(null);
   const quickStart = useRef(null);
   const quickForm = useRef(null);
   const advancedForm = useRef(null);
@@ -75,6 +78,7 @@ const AdminTimeSlots = () => {
 
   const day = schedule?.date === selectedDate ? schedule : null;
   const slots = day?.slots || [];
+  const nextSlot = day && !day.error && availability?.date === selectedDate ? availability.slot : null;
   const quickTimeHint = getTimeHint(newSlot, slots);
   const createTimeHint = getTimeHint(advancedSlot, createDate === selectedDate ? slots : otherDay?.date === createDate ? otherDay.slots : []);
   const editTimeHint = getTimeHint(editingSlot, slots);
@@ -99,6 +103,36 @@ const AdminTimeSlots = () => {
     if (user) fetchSlots();
     return () => scheduleRequest.current?.abort();
   }, [user, fetchSlots]);
+
+  useEffect(() => {
+    if (!day || day.error) return undefined;
+    const request = new AbortController();
+    const today = getToday();
+    const fromDate = selectedDate > today ? selectedDate : today;
+    const fromTime = fromDate === today ? new Date().toTimeString().slice(0, 5) : '00:00';
+    api.get('/admin/time-slots', { params: { next: 'true', fromDate, fromTime }, signal: request.signal })
+      .then(({ data }) => {
+        if (!request.signal.aborted) setAvailability({ date: selectedDate, slot: data.slot, error: !data.success });
+      })
+      .catch(() => {
+        if (!request.signal.aborted) setAvailability({ date: selectedDate, error: true });
+      });
+    return () => request.abort();
+  }, [day, selectedDate]);
+
+  const focusSlot = (id) => {
+    const slot = Array.from(slotList.current?.querySelectorAll('[data-slot-id]') || [])
+      .find(item => item.dataset.slotId === String(id) && item.getClientRects().length);
+    slot?.scrollIntoView({ block: 'nearest' });
+    slot?.focus({ preventScroll: true });
+  };
+
+  useEffect(() => {
+    const target = pendingSlotJump.current;
+    if (!day || !target || target.date !== day.date) return;
+    pendingSlotJump.current = null;
+    focusSlot(target._id);
+  }, [day]);
 
   useEffect(() => {
     if (!showModal || !createDate || createDate === selectedDate) return undefined;
@@ -319,10 +353,28 @@ const AdminTimeSlots = () => {
         </form>
       </section>
 
-      <section className="slot-card slot-schedule" aria-labelledby="slot-schedule-title" aria-busy={!day}>
+      <section ref={slotList} className="slot-card slot-schedule" aria-labelledby="slot-schedule-title" aria-busy={!day}>
         <h2 id="slot-schedule-title" className="portal-form-section-title">
           <i className="bi bi-calendar-week portal-form-icon" aria-hidden="true" /> Daily schedule
         </h2>
+        {nextSlot && (
+          <div className="slot-next-available">
+            <div>
+              <h3>Next available</h3>
+              <p className="small text-muted mb-0">{formatDay(nextSlot.date)} · {nextSlot.startTime}–{nextSlot.endTime}</p>
+            </div>
+            <button type="button" className="btn btn-outline-primary" disabled={savingSlot} onClick={() => {
+              if (nextSlot.date === selectedDate) focusSlot(nextSlot._id);
+              else {
+                pendingSlotJump.current = nextSlot;
+                setSelectedDate(nextSlot.date);
+              }
+            }}>Go to slot</button>
+          </div>
+        )}
+        {!nextSlot && day && !day.error && availability?.date === selectedDate && (
+          <p className="small text-muted">{availability.error ? 'Could not check upcoming availability.' : 'No upcoming slots with space.'}</p>
+        )}
         {!day ? (
           <p className="text-muted mb-0" role="status">Loading time slots…</p>
         ) : day.error ? (
@@ -344,7 +396,7 @@ const AdminTimeSlots = () => {
                 </thead>
                 <tbody>
                   {slots.map(slot => (
-                    <tr key={slot._id}>
+                    <tr key={slot._id} data-slot-id={slot._id} tabIndex={-1} className={slot._id === nextSlot?._id ? 'slot-next-highlight' : undefined}>
                       <th scope="row">{slot.startTime}–{slot.endTime}</th>
                       <td><SlotCapacity slot={slot} /></td>
                       <td>{renderSlotStatus(slot)}</td>
@@ -356,7 +408,7 @@ const AdminTimeSlots = () => {
             </div>
             <ul className="slot-mobile-list">
               {slots.map(slot => (
-                <li key={slot._id} className="slot-mobile-item">
+                <li key={slot._id} data-slot-id={slot._id} tabIndex={-1} className={`slot-mobile-item${slot._id === nextSlot?._id ? ' slot-next-highlight' : ''}`}>
                   <div className="slot-mobile-heading">
                     <h3>{slot.startTime}–{slot.endTime}</h3>
                     {renderSlotStatus(slot)}

@@ -112,6 +112,24 @@ body:has(.portal-form-dialog[open]) { overflow: hidden; }
 .campaign-review { margin: 0; }
 .campaign-review dt { color: var(--ink-2); font-size: .875rem; }
 .campaign-review dd { margin: .2rem 0 0; overflow-wrap: anywhere; }
+.ad-crop-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; align-items: start; }
+.ad-crop-item { display: grid; gap: .4rem; min-width: 0; margin: 0; }
+.ad-crop-item[data-current="false"] { display: none; }
+.ad-crop-frame {
+  position: relative;
+  width: min(100%, 24rem);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--canvas);
+}
+.ad-crop-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+@media (min-width: 768px) {
+  .ad-crop-picker { display: none; }
+  .ad-crop-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); }
+  .ad-crop-grid .ad-crop-item { display: grid; }
+}
 .campaign-banner-preview {
   display: grid;
   place-items: center;

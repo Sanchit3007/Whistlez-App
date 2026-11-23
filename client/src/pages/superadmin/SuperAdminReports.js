@@ -1,130 +1,117 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../../context/AuthContext';
 import ReportFilterToolbar from '../../components/ReportFilterToolbar';
+import ReportPeriodComparison from '../../components/ReportPeriodComparison';
 import { downloadCsv } from '../../utils/downloadCsv';
 import { useReportFilters } from '../../utils/reportFilterSession';
+import './SuperAdminReports.css';
 
 const defaultFilters = { searchQuery: '', userRole: 'all', businessStatus: 'all', adStatus: 'all' };
+const formatDate = value => value ? new Date(value).toLocaleString() : '';
+
+const reports = [
+  {
+    id: 'users',
+    title: 'Users',
+    description: 'Registered accounts, email addresses, and roles.',
+    icon: 'people',
+    filter: 'userRole',
+    headers: ['Name', 'Email', 'Role', 'Registered At'],
+    matches: (user, role, search) => (role === 'all' || user.role === role) && search(user.name, user.email),
+    row: user => [user.name, user.email, user.role, formatDate(user.createdAt)]
+  },
+  {
+    id: 'businesses',
+    title: 'Businesses',
+    description: 'Business profiles, linked admins, and registration dates.',
+    icon: 'shop-window',
+    filter: 'businessStatus',
+    headers: ['Business Name', 'Domain', 'Admin Name', 'Admin Email', 'City', 'State', 'Address', 'Registered At'],
+    matches: (business, status, search) => (status === 'all' || business.businessStatus === status) &&
+      search(business.name, business.admin?.name, business.admin?.email),
+    row: business => [
+      business.name, business.domain, business.admin?.name || 'N/A', business.admin?.email || 'N/A',
+      business.city, business.state, business.address, formatDate(business.createdAt)
+    ]
+  },
+  {
+    id: 'ads',
+    title: 'Ads',
+    description: 'Campaign placements, targeting, views, and clicks.',
+    icon: 'megaphone',
+    filter: 'adStatus',
+    headers: ['Ad Campaign Name', 'Placements', 'Active Status', 'URL', 'Views', 'Clicks', 'CTR (%)', 'Targeting Type', 'Created At'],
+    matches: (ad, status, search) => (status === 'all' || Boolean(ad.isActive) === (status === 'active')) && search(ad.name, ad.url),
+    row: ad => [
+      ad.name,
+      ad.positions?.length ? ad.positions.join(' | ') : ad.position || 'N/A',
+      ad.isActive ? 'Active' : 'Inactive',
+      ad.url,
+      ad.views || 0,
+      ad.clicks || 0,
+      ad.views > 0 ? ((ad.clicks / ad.views) * 100).toFixed(2) + '%' : '0.00%',
+      ad.targeting?.type || 'GLOBAL',
+      formatDate(ad.createdAt)
+    ]
+  }
+];
 
 const SuperAdminReports = () => {
-  const [downloadingUsers, setDownloadingUsers] = useState(false);
-  const [downloadingBusinesses, setDownloadingBusinesses] = useState(false);
-  const [downloadingAds, setDownloadingAds] = useState(false);
-  const [error, setError] = useState('');
   const { filters, setFilters, hasFilters, clearFilters } = useReportFilters('system', defaultFilters);
+  const [feedback, setFeedback] = useState({});
+  const activeDownloads = useRef(new Map());
   const query = filters.searchQuery.trim().toLowerCase();
   const matchesSearch = (...fields) => !query || fields.some(field => field?.toLowerCase().includes(query));
 
-  const handleDownloadUsers = async () => {
-    try {
-      setDownloadingUsers(true);
-      setError('');
-      const res = await api.get('/superadmin/users');
-      if (res.data.success) {
-        const users = res.data.users.filter(user =>
-          (filters.userRole === 'all' || user.role === filters.userRole) && matchesSearch(user.name, user.email)
-        );
-        const headers = ['Name', 'Email', 'Role', 'Registered At'];
-        const rows = users.map(u => [
-          u.name,
-          u.email,
-          u.role,
-          u.createdAt ? new Date(u.createdAt).toLocaleString() : ''
-        ]);
-        downloadCsv(headers, rows, `whistle_users_${new Date().toISOString().split('T')[0]}`);
-      }
-    } catch (err) {
-      console.error('Error downloading users report', err);
-      setError('Failed to compile users report.');
-    } finally {
-      setDownloadingUsers(false);
-    }
-  };
+  useEffect(() => {
+    const downloads = activeDownloads.current;
+    return () => {
+      downloads.forEach(request => request.abort());
+      downloads.clear();
+    };
+  }, []);
 
-  const handleDownloadBusinesses = async () => {
-    try {
-      setDownloadingBusinesses(true);
-      setError('');
-      const res = await api.get('/superadmin/businesses');
-      if (res.data.success) {
-        const businesses = res.data.businesses.filter(business =>
-          (filters.businessStatus === 'all' || business.businessStatus === filters.businessStatus) &&
-          matchesSearch(business.name, business.admin?.name, business.admin?.email)
-        );
-        const headers = ['Business Name', 'Domain', 'Admin Name', 'Admin Email', 'City', 'State', 'Address', 'Registered At'];
-        const rows = businesses.map(b => [
-          b.name,
-          b.domain,
-          b.admin?.name || 'N/A',
-          b.admin?.email || 'N/A',
-          b.city,
-          b.state,
-          b.address,
-          b.createdAt ? new Date(b.createdAt).toLocaleString() : ''
-        ]);
-        downloadCsv(headers, rows, `whistle_businesses_${new Date().toISOString().split('T')[0]}`);
-      }
-    } catch (err) {
-      console.error('Error downloading business report', err);
-      setError('Failed to compile business report.');
-    } finally {
-      setDownloadingBusinesses(false);
-    }
-  };
+  const downloadReport = async (report, selection) => {
+    if (activeDownloads.current.has(report.id)) return;
+    const request = new AbortController();
+    activeDownloads.current.set(report.id, request);
+    const notify = (state, message) => setFeedback(current => ({
+      ...current,
+      [report.id]: { state, message, selection }
+    }));
+    notify('pending', 'Preparing CSV…');
 
-  const handleDownloadAds = async () => {
     try {
-      setDownloadingAds(true);
-      setError('');
-      const res = await api.get('/superadmin/ads');
-      if (res.data.success) {
-        const ads = res.data.ads.filter(ad =>
-          (filters.adStatus === 'all' || Boolean(ad.isActive) === (filters.adStatus === 'active')) && matchesSearch(ad.name, ad.url)
-        );
-        const headers = ['Ad Campaign Name', 'Placements', 'Active Status', 'URL', 'Views', 'Clicks', 'CTR (%)', 'Targeting Type', 'Created At'];
-        const rows = ads.map(ad => {
-          const ctr = ad.views > 0 ? ((ad.clicks / ad.views) * 100).toFixed(2) : '0.00';
-          const placements = ad.positions && ad.positions.length 
-            ? ad.positions.join(' | ') 
-            : (ad.position || 'N/A');
-          return [
-            ad.name,
-            placements,
-            ad.isActive ? 'Active' : 'Inactive',
-            ad.url,
-            ad.views || 0,
-            ad.clicks || 0,
-            `${ctr}%`,
-            ad.targeting?.type || 'GLOBAL',
-            ad.createdAt ? new Date(ad.createdAt).toLocaleString() : ''
-          ];
-        });
-        downloadCsv(headers, rows, `whistle_ads_${new Date().toISOString().split('T')[0]}`);
+      const { data } = await api.get(`/superadmin/${report.id}`, { signal: request.signal });
+      if (request.signal.aborted) return;
+      if (!data.success || !Array.isArray(data[report.id])) throw new Error('Invalid report response');
+      const rows = data[report.id].filter(record => report.matches(record, filters[report.filter], matchesSearch)).map(report.row);
+      if (!rows.length) {
+        notify('empty', 'No matching rows.');
+        return;
       }
-    } catch (err) {
-      console.error('Error downloading ads report', err);
-      setError('Failed to compile ads report.');
+      downloadCsv(report.headers, rows, `whistle_${report.id}_${new Date().toISOString().slice(0, 10)}`);
+      notify('ready', `CSV prepared · ${rows.length} ${rows.length === 1 ? 'row' : 'rows'}`);
+    } catch {
+      if (!request.signal.aborted) notify('error', 'Could not prepare the CSV. Try again.');
     } finally {
-      setDownloadingAds(false);
+      if (activeDownloads.current.get(report.id) === request) activeDownloads.current.delete(report.id);
     }
   };
 
   return (
-    <div className="animated-fade-in">
+    <div className="animated-fade-in system-reports">
       <div className="page-head">
         <div>
           <h1 className="fw-extrabold text-dark">Global System Reports</h1>
-          <p className="text-muted mb-0">Search and filter report rows before exporting.</p>
+          <p className="text-muted mb-0">Compare business registrations and export report data.</p>
         </div>
       </div>
 
-      {error && (
-        <div className="alert alert-danger border-0 rounded-3 small mb-4">
-          {error}
-        </div>
-      )}
+      <ReportPeriodComparison compact />
 
-      <section className="card p-3 p-md-4 mb-3" aria-label="Report filters">
+      <section className="card p-3 p-md-4" aria-labelledby="system-report-exports">
+        <h2 id="system-report-exports" className="h5 mb-3">Export data</h2>
         <ReportFilterToolbar searchLabel="Search reports" searchPlaceholder="User, business, or campaign"
           search={filters.searchQuery} onSearch={value => setFilters({ ...filters, searchQuery: value })}
           hasFilters={hasFilters} onClear={clearFilters}>
@@ -147,75 +134,37 @@ const SuperAdminReports = () => {
             </select>
           </label>
         </ReportFilterToolbar>
+
+        <ul className="list-unstyled mb-0 system-report-list">
+          {reports.map(report => {
+            const selection = JSON.stringify([query, filters[report.filter]]);
+            const status = feedback[report.id];
+            const preparing = status?.state === 'pending';
+            const message = preparing || status?.selection === selection ? status?.message : '';
+            return (
+              <li key={report.id} className="system-report-row">
+                <div className="system-report-info">
+                  <i className={`bi bi-${report.icon} system-report-icon`} aria-hidden="true" />
+                  <div>
+                    <h3 className="h6 mb-1">{report.title}</h3>
+                    <p className="small text-muted mb-0">{report.description}</p>
+                  </div>
+                </div>
+                <div className="system-report-actions">
+                  <button type="button" className="btn btn-outline-primary workspace-primary"
+                    aria-label={`Download ${report.title.toLowerCase()} CSV`} disabled={preparing}
+                    onClick={() => downloadReport(report, selection)}>
+                    <i className="bi bi-download me-1" aria-hidden="true" /> Download CSV
+                  </button>
+                  <p className={`small mb-0 ${status?.state === 'error' ? 'text-danger' : 'text-muted'}`} role="status">
+                    {message}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       </section>
-
-      <div className="report-grid">
-        {/* Card 1: Users Reports */}
-        <div>
-          <div className="card border-0 p-4 bg-white shadow-sm rounded-4 h-100 d-flex flex-column justify-content-between">
-            <div>
-              <div className="stat-widget-icon stat-widget-blue mb-3">
-                <i className="bi bi-people-fill fs-3"></i>
-              </div>
-              <h5 className="fw-bold text-dark mb-2">Users Reports</h5>
-              <p className="text-muted small mb-4">
-                Extract summaries of registered administrators, staff logs, and user roles counts.
-              </p>
-            </div>
-            <button 
-              className="btn btn-outline-primary w-100 py-2 fw-bold"
-              onClick={handleDownloadUsers}
-              disabled={downloadingUsers}
-            >
-              <i className="bi bi-download me-1"></i> {downloadingUsers ? 'Downloading...' : 'Download Excel'}
-            </button>
-          </div>
-        </div>
-
-        {/* Card 2: Business Reports */}
-        <div>
-          <div className="card border-0 p-4 bg-white shadow-sm rounded-4 h-100 d-flex flex-column justify-content-between">
-            <div>
-              <div className="stat-widget-icon stat-widget-green mb-3">
-                <i className="bi bi-shop-window fs-3"></i>
-              </div>
-              <h5 className="fw-bold text-dark mb-2">Business Report</h5>
-              <p className="text-muted small mb-4">
-                Detailed breakdowns of outlets registrations, domains, active queues, and usage limits.
-              </p>
-            </div>
-            <button 
-              className="btn btn-outline-primary w-100 py-2 fw-bold"
-              onClick={handleDownloadBusinesses}
-              disabled={downloadingBusinesses}
-            >
-              <i className="bi bi-download me-1"></i> {downloadingBusinesses ? 'Downloading...' : 'Download Excel'}
-            </button>
-          </div>
-        </div>
-
-        {/* Card 3: Ads Reports */}
-        <div>
-          <div className="card border-0 p-4 bg-white shadow-sm rounded-4 h-100 d-flex flex-column justify-content-between">
-            <div>
-              <div className="stat-widget-icon stat-widget-purple mb-3">
-                <i className="bi bi-megaphone-fill fs-3"></i>
-              </div>
-              <h5 className="fw-bold text-dark mb-2">Ads Report</h5>
-              <p className="text-muted small mb-4">
-                Performance tracking sheet aggregating campaign views, active status, duration and priority specs.
-              </p>
-            </div>
-            <button 
-              className="btn btn-outline-primary w-100 py-2 fw-bold"
-              onClick={handleDownloadAds}
-              disabled={downloadingAds}
-            >
-              <i className="bi bi-download me-1"></i> {downloadingAds ? 'Downloading...' : 'Download Excel'}
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

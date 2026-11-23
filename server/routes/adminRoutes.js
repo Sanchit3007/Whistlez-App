@@ -18,6 +18,7 @@ const {
   updateTimeSlot
 } = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/auth');
+const { getKycNotifications } = require('../controllers/notificationController');
 
 // All routes require authentication and admin role
 router.use(protect);
@@ -27,6 +28,7 @@ router.use(authorize('admin'));
 router.get('/business', getBusinessProfile);
 router.put('/business', updateBusinessProfile);
 router.post('/business/kyc', submitKyc);
+router.get('/notifications/kyc', getKycNotifications);
 router.post('/business/qr/generate', generateQRCode);
 router.put('/business/qr', updateQRCode);
 router.delete('/business/qr', removeQRCode);

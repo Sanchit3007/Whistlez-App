@@ -53,6 +53,79 @@ const UpdatedDate = ({ request }) => {
 
 const getDocumentLabel = (type) => verificationDocuments.find(doc => doc.type === type)?.label || type;
 
+const KycBusinessDetails = ({ business }) => {
+  const details = business.kycDetails;
+  const isCompany = (business.businessType || 'Company') === 'Company';
+  const businessFields = [
+    ['PAN number', details?.panNumber],
+    ['GST number', details?.gstNumber],
+    ...(isCompany ? [
+      ['Legal name', details?.companyDetails?.legalName],
+      ['Registration number', details?.companyDetails?.registrationNumber]
+    ] : [['Aadhaar / ID', details?.individualDetails?.aadhaarOrId]])
+  ];
+
+  return (
+    <section className="kyc-business-information" aria-labelledby="kyc-business-heading">
+      <h3 id="kyc-business-heading" className="portal-form-section-title">Business information</h3>
+      <dl className="kyc-business-facts">
+        {[
+          ['Phone', details?.phoneNumber],
+          ['Email', details?.emailAddress],
+          ...businessFields
+        ].map(([label, value]) => (
+          <div key={label}><dt>{label}</dt><dd>{value || 'Not provided'}</dd></div>
+        ))}
+      </dl>
+    </section>
+  );
+};
+
+const KycInspection = ({ source, label, original, unavailable, onError }) => {
+  const [zoom, setZoom] = useState(100);
+  const [rotation, setRotation] = useState(0);
+  const [imageRatio, setImageRatio] = useState(1);
+  const sideways = rotation % 180 !== 0;
+
+  return (
+    <>
+      <div className="kyc-viewer-tools" role="group" aria-label="Document tools">
+        {!unavailable && (
+          <>
+            <button type="button" className="btn btn-outline-secondary" aria-label="Zoom out" disabled={zoom === 100} onClick={() => setZoom(value => value - 25)}>
+              <i className="bi bi-dash-lg" aria-hidden="true" />
+            </button>
+            <output aria-label="Zoom level">{zoom}%</output>
+            <button type="button" className="btn btn-outline-secondary" aria-label="Zoom in" disabled={zoom === 200} onClick={() => setZoom(value => value + 25)}>
+              <i className="bi bi-plus-lg" aria-hidden="true" />
+            </button>
+            <button type="button" className="btn btn-outline-secondary" onClick={() => setRotation(value => (value + 90) % 360)}>
+              <i className="bi bi-arrow-clockwise me-1" aria-hidden="true" />Rotate
+            </button>
+          </>
+        )}
+        <a className="btn btn-outline-primary" href={original} target="_blank" rel="noreferrer">Open original</a>
+      </div>
+      <div className="modal-body kyc-viewer-scroll" role="region" aria-label="Document preview" tabIndex={0}>
+        {unavailable ? <p className="text-muted mb-0">Preview unavailable. Open the original to review this document.</p> : (
+          <div className="kyc-viewer-sheet" style={{ '--kyc-zoom': zoom / 100, aspectRatio: sideways ? 1 / imageRatio : imageRatio }}>
+            <img src={source} alt={`${label} preview`} onError={onError}
+              onLoad={event => {
+                const { naturalWidth, naturalHeight } = event.currentTarget;
+                if (naturalWidth && naturalHeight) setImageRatio(naturalWidth / naturalHeight);
+              }}
+              style={{
+                width: sideways ? `${imageRatio * 100}%` : '100%',
+                height: sideways ? `${100 / imageRatio}%` : '100%',
+                transform: `translate(-50%, -50%) rotate(${rotation}deg)`
+              }} />
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
+
 const KycDocuments = ({ documents }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [unavailable, setUnavailable] = useState(false);
@@ -66,23 +139,29 @@ const KycDocuments = ({ documents }) => {
   // Cloudinary can render the first PDF page for quick inspection.
   const preview = selected?.url.replace(/\.pdf(?=\?|$)/i, '.jpg');
   const documentLabel = selected ? checklist[selectedIndex].label : '';
+  const chooseDocument = (index) => {
+    if (selectedIndex !== index) setUnavailable(false);
+    setSelectedIndex(index);
+  };
 
   return (
     <section className="kyc-documents" aria-labelledby="kyc-documents-heading">
-      <h3 id="kyc-documents-heading" className="dash-card-title mb-3">Documents</h3>
+      <header className="kyc-documents-heading">
+        <h3 id="kyc-documents-heading" className="portal-form-section-title mb-0">Documents</h3>
+        <span className="small text-muted">{files.length} uploaded</span>
+      </header>
       <ul className="kyc-document-list">
         {checklist.map(({ label, index }) => (
           <li key={index ?? label}>
             {index === undefined ? (
-              <div className="kyc-document-choice">
-                <span>{label}</span><small>Missing</small>
+              <div className="kyc-document-choice kyc-document-missing">
+                <span><i className="bi bi-file-earmark me-2" aria-hidden="true" />{label}</span>
+                <small className="kyc-document-status">Missing</small>
               </div>
             ) : (
-              <button type="button" className="workspace-tab-button kyc-document-choice" aria-pressed={selectedIndex === index} onClick={() => {
-                if (selectedIndex !== index) setUnavailable(false);
-                setSelectedIndex(index);
-              }}>
-                <span>{label}</span><small><i className="bi bi-check2" aria-hidden="true" /> Uploaded</small>
+              <button type="button" className="workspace-tab-button kyc-document-choice" aria-pressed={selectedIndex === index} onClick={() => chooseDocument(index)}>
+                <span><i className="bi bi-file-earmark-text me-2" aria-hidden="true" />{label}</span>
+                <small className="kyc-document-status"><i className="bi bi-check2" aria-hidden="true" /> Uploaded</small>
               </button>
             )}
           </li>
@@ -114,14 +193,25 @@ const KycDocuments = ({ documents }) => {
                     <i className="bi bi-x-lg" aria-hidden="true" />
                   </button>
                 </header>
-                <div className="modal-body">
-                  <img src={preview} alt={`${documentLabel} preview`} />
-                </div>
+                {files.length > 1 && (
+                  <div className="kyc-viewer-nav" role="group" aria-label="Browse documents">
+                    <button type="button" className="btn btn-outline-secondary" disabled={selectedIndex === 0} onClick={() => chooseDocument(selectedIndex - 1)}>Previous</button>
+                    <span className="small text-muted" role="status">Document {selectedIndex + 1} of {files.length}</span>
+                    <button type="button" className="btn btn-outline-secondary" disabled={selectedIndex === files.length - 1} onClick={() => chooseDocument(selectedIndex + 1)}>Next</button>
+                  </div>
+                )}
+                <KycInspection key={selectedIndex} source={preview} label={documentLabel} original={selected.url}
+                  unavailable={unavailable} onError={() => setUnavailable(true)} />
               </div>
             </FormDialog>
           )}
         </>
-      ) : <p className="text-muted mb-0">No documents uploaded.</p>}
+      ) : (
+        <div className="kyc-documents-empty">
+          <i className="bi bi-folder2-open" aria-hidden="true" />
+          <p className="mb-0">No documents were uploaded for this application.</p>
+        </div>
+      )}
     </section>
   );
 };
@@ -371,53 +461,41 @@ const SuperAdminKyc = () => {
           )}
         </section>
       ) : (
-        <div className="card shadow-sm border-0">
-          <div className="card-header bg-white py-3 d-flex flex-wrap gap-2 justify-content-between align-items-center">
-            <h2 ref={reviewHeading} tabIndex={-1} className="h5 mb-0 fw-bold">{selectedKyc.name}</h2>
-            <button type="button" className="btn btn-outline-secondary" disabled={actionLoading} onClick={() => {
+        <article className="card kyc-review-card" aria-labelledby="kyc-application-title">
+          <header className="kyc-review-header">
+            <div>
+              <h2 id="kyc-application-title" ref={reviewHeading} tabIndex={-1}>{selectedKyc.name}</h2>
+              <div className="kyc-review-meta">
+                <KycStatus status={selectedKyc.kycStatus} />
+                <span>{selectedKyc.businessType || 'Company'}</span>
+              </div>
+            </div>
+            <button type="button" className="btn btn-outline-secondary workspace-primary" disabled={actionLoading} onClick={() => {
               resetDecision();
               setSelectedKyc(null);
             }}><i className="bi bi-arrow-left me-2" aria-hidden="true" />Back to applications</button>
-          </div>
-          <div className="card-body kyc-review-grid p-3 p-md-4">
-              <section className="kyc-business-information" aria-labelledby="kyc-business-heading">
-                <h3 id="kyc-business-heading" className="dash-card-title mb-2">Business information</h3>
-                <p className="mb-1">
-                  <strong>Status:</strong> <KycStatus status={selectedKyc.kycStatus} />
-                </p>
-                <p className="mb-1"><strong>Type:</strong> {selectedKyc.businessType || 'Company'}</p>
-                <p className="mb-1"><strong>Phone:</strong> {selectedKyc.kycDetails?.phoneNumber}</p>
-                <p className="mb-1"><strong>Email:</strong> {selectedKyc.kycDetails?.emailAddress}</p>
-                <p className="mb-1"><strong>GST Number:</strong> {selectedKyc.kycDetails?.gstNumber || 'N/A'}</p>
-                <p className="mb-1"><strong>PAN Number:</strong> {selectedKyc.kycDetails?.panNumber}</p>
-                
-                {selectedKyc.businessType === 'Company' ? (
-                  <>
-                    <p className="mb-1"><strong>Legal Name:</strong> {selectedKyc.kycDetails?.companyDetails?.legalName}</p>
-                    <p className="mb-1"><strong>Reg Number:</strong> {selectedKyc.kycDetails?.companyDetails?.registrationNumber}</p>
-                  </>
-                ) : (
-                  <p className="mb-1"><strong>Aadhaar / ID:</strong> {selectedKyc.kycDetails?.individualDetails?.aadhaarOrId}</p>
-                )}
-              </section>
-              <KycDocuments key={selectedKyc._id} documents={selectedKyc.kycDetails?.documents} />
+          </header>
+          <div className="kyc-review-grid">
+            <KycBusinessDetails business={selectedKyc} />
+            <KycDocuments key={selectedKyc._id} documents={selectedKyc.kycDetails?.documents} />
 
             {canDecide && (
               <section className="kyc-review-decision" id="kyc-review-decision" tabIndex={-1} aria-labelledby="kyc-decision-heading">
-                <h3 id="kyc-decision-heading" className="dash-card-title mb-3">Review decision</h3>
+                <h3 id="kyc-decision-heading" className="portal-form-section-title">Review decision</h3>
+                {!decision && <p className="small text-muted mb-3">Approval activates the business. Request resubmission when the application needs corrections.</p>}
                 {!decision ? (
                   <div className="kyc-review-actions">
-                    <button type="button" className="btn btn-primary px-4" onClick={() => handleAction('Approved')} disabled={actionLoading}>
-                      {actionLoading ? 'Approving…' : 'Approve'}
+                    <button type="button" className="btn btn-primary" onClick={() => handleAction('Approved')} disabled={actionLoading}>
+                      <i className="bi bi-check-lg me-2" aria-hidden="true" />{actionLoading ? 'Approving…' : 'Approve'}
                     </button>
-                    <button type="button" className="btn btn-outline-secondary px-4" disabled={actionLoading} onClick={() => {
+                    <button type="button" className="btn btn-outline-secondary" disabled={actionLoading} onClick={() => {
                       setDecisionError('');
                       setDecision('Resubmission Required');
-                    }}>Request resubmission</button>
-                    <button type="button" className="btn btn-outline-secondary text-danger px-4" disabled={actionLoading} onClick={() => {
+                    }}><i className="bi bi-arrow-repeat me-2" aria-hidden="true" />Request resubmission</button>
+                    <button type="button" className="btn btn-outline-danger" disabled={actionLoading} onClick={() => {
                       setDecisionError('');
                       setDecision('Rejected');
-                    }}>Reject</button>
+                    }}><i className="bi bi-x-lg me-2" aria-hidden="true" />Reject</button>
                   </div>
                 ) : (
                   <form onSubmit={event => { event.preventDefault(); handleAction(decision); }}>
@@ -443,7 +521,10 @@ const SuperAdminKyc = () => {
                         <button type="submit" className={`btn ${decision === 'Rejected' ? 'btn-danger' : 'btn-primary'} px-4`}>
                           {actionLoading ? 'Saving…' : decision === 'Rejected' ? 'Confirm rejection' : 'Send request'}
                         </button>
-                        <button type="button" className="btn btn-outline-secondary px-4" onClick={resetDecision}>Cancel</button>
+                        <button type="button" className="btn btn-outline-secondary px-4" onClick={() => {
+                          resetDecision();
+                          document.getElementById('kyc-review-decision')?.focus({ preventScroll: true });
+                        }}>Cancel</button>
                       </div>
                     </fieldset>
                   </form>
@@ -455,7 +536,7 @@ const SuperAdminKyc = () => {
             {/* If it's already in history, just show a read-only message or reason if rejected */}
             {(selectedKyc.kycStatus === 'Approved' || selectedKyc.kycStatus === 'Rejected') && (
               <div className="kyc-review-decision">
-                <h6 className="fw-bold mb-2">Review Completed</h6>
+                <h3 className="portal-form-section-title">Review completed</h3>
                 <p className="mb-0 text-muted">This KYC application was marked as <strong>{selectedKyc.kycStatus}</strong>.</p>
                 {selectedKyc.kycDetails?.rejectionReason && (
                   <p className="mt-2 text-danger mb-0"><strong>Reason:</strong> {selectedKyc.kycDetails.rejectionReason}</p>
@@ -476,7 +557,7 @@ const SuperAdminKyc = () => {
               }}>Review decision</button>
             </div>
           )}
-        </div>
+        </article>
       )}
     </div>
   );

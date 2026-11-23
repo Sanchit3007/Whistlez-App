@@ -4,6 +4,7 @@ const Ringtone = require('../models/Ringtone');
 const Ad = require('../models/Ad');
 const { uploadToCloudinary, sendMediaUploadError } = require('../config/cloudinary');
 const { activeAdsOn, validateAdSchedule } = require('../utils/adSchedule');
+const { recordKycActivity } = require('../utils/kycActivity');
 
 // @desc    Get All Registered Businesses & Admins
 // @route   GET /api/superadmin/businesses
@@ -671,11 +672,12 @@ const updateKycStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid KYC status' });
     }
 
-    const business = await Business.findById(businessId);
+    const business = await Business.findById(businessId).select('+kycActivity');
     if (!business) {
       return res.status(404).json({ success: false, message: 'Business not found' });
     }
 
+    recordKycActivity(business, status);
     business.kycStatus = status;
 
     if (status === 'Approved') {
@@ -700,7 +702,9 @@ const updateKycStatus = async (req, res) => {
       io.to('superadmin').emit('businessesUpdated');
     }
 
-    res.json({ success: true, message: `KYC marked as ${status}`, business });
+    const profile = business.toObject();
+    delete profile.kycActivity;
+    res.json({ success: true, message: `KYC marked as ${status}`, business: profile });
   } catch (error) {
     console.error('Superadmin update KYC error:', error);
     res.status(500).json({ success: false, message: 'Server error updating KYC' });

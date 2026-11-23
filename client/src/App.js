@@ -38,7 +38,7 @@ import SuperAdminTrending from './pages/superadmin/SuperAdminTrending';
 import SuperAdminLiveMobile from './pages/superadmin/SuperAdminLiveMobile';
 
 // Protector for authenticated routes with role verification (RBAC)
-const ProtectedRoute = ({ children, allowedRoles }) => {
+const ProtectedRoute = ({ children, allowedRoles, standalone = false }) => {
   const { user, loading, isAuthenticated } = useAuth();
 
   if (loading) {
@@ -59,7 +59,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to={user.role === 'superadmin' ? '/superadmin/dashboard' : '/admin/dashboard'} replace />;
   }
 
-  if (user.role === 'admin' || user.role === 'superadmin') {
+  if (!standalone && (user.role === 'admin' || user.role === 'superadmin')) {
     return <AuthenticatedWorkspace user={user}>{children}</AuthenticatedWorkspace>;
   }
 
@@ -258,6 +258,14 @@ const router = createBrowserRouter(createRoutesFromElements(
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminTimeSlots />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/live-queue/display"
+            element={
+              <ProtectedRoute allowedRoles={['admin']} standalone>
+                <LiveQueue counterDisplay />
               </ProtectedRoute>
             }
           />

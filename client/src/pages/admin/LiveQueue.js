@@ -1,11 +1,12 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import socket from '../../socket';
 import { api } from '../../context/AuthContext';
 import { useToast } from '../../components/ToastProvider';
 import { SkeletonTokenCard } from '../../components/Skeleton';
 import FormDialog from '../../components/FormDialog';
 import LiveStatus from '../../components/LiveStatus';
+import QueueCounterDisplay from '../../components/QueueCounterDisplay';
 
 const formatArrival = (timestamp) => new Date(timestamp).toLocaleString([], {
   dateStyle: 'medium',
@@ -106,7 +107,7 @@ const QueueCardPage = ({ tickets, stage, children }) => {
   );
 };
 
-const LiveQueue = () => {
+const LiveQueue = ({ counterDisplay = false }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const linkedToken = searchParams.get('ticket');
   const linkedDate = searchParams.get('date');
@@ -114,6 +115,7 @@ const LiveQueue = () => {
   const [tokens, setTokens] = useState([]);
   const [business, setBusiness] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(true);
   const [error, setError] = useState('');
   const [queueSnapshot, setQueueSnapshot] = useState(null);
   const queueRequest = useRef(null);
@@ -192,7 +194,10 @@ const LiveQueue = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Date Picker states for Live Queue
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => (
+    counterDisplay && /^\d{4}-\d{2}-\d{2}$/.test(linkedDate || '') && Number.isFinite(Date.parse(linkedDate))
+      ? linkedDate : new Date().toISOString().slice(0, 10)
+  ));
   const [postponeDate, setPostponeDate] = useState(new Date(Date.now() + 86400000).toISOString().split('T')[0]);
   const [postponing, setPostponing] = useState(false);
 
@@ -220,6 +225,7 @@ const LiveQueue = () => {
     queueRequest.current?.abort();
     const request = new AbortController();
     queueRequest.current = request;
+    setRefreshing(true);
     try {
       const [tokensRes, businessRes] = await Promise.all([
         api.get(`/admin/tokens?date=${selectedDate}`, { signal: request.signal }),
@@ -239,7 +245,10 @@ const LiveQueue = () => {
       console.error('Error fetching live queue data', err);
       setError('Could not retrieve live queue data.');
     } finally {
-      if (!request.signal.aborted) setLoading(false);
+      if (!request.signal.aborted) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [selectedDate]);
 
@@ -472,6 +481,12 @@ const LiveQueue = () => {
   const servingCount = servingList.length;
   const completedCount = completedList.length;
 
+  if (counterDisplay) {
+    return <QueueCounterDisplay counter={business?.queueConfig?.name} date={selectedDate} serving={nowServing && formatTokenNumber(nowServing.tokenNumber)}
+      next={upNext && formatTokenNumber(upNext.tokenNumber)} updatedAt={queueSnapshot?.at}
+      stale={Boolean(error)} refreshing={refreshing} onRetry={fetchLiveQueueData} />;
+  }
+
   return (
     <div className="live-queue-page-container animated-fade-in position-relative">
       {/* HEADER SECTION */}
@@ -480,7 +495,8 @@ const LiveQueue = () => {
           <h1 ref={queueHeading} tabIndex={-1} className="fw-extrabold text-dark mb-1">Live Queue</h1>
           <p className="text-muted small mb-0 d-flex align-items-center flex-wrap gap-2">
             <span className="fw-bold text-dark">{business?.queueConfig?.name || 'General OPD Queue'}</span>
-            <LiveStatus updatedAt={currentSnapshot ? queueSnapshot.at : null} stale={Boolean(error)} />
+            <LiveStatus updatedAt={currentSnapshot ? queueSnapshot.at : null}
+              stale={Boolean(error)} refreshing={refreshing} onRetry={fetchLiveQueueData} />
             <span className="font-monospace text-muted">{formatClock(currentTime)}</span>
           </p>
         </div>
@@ -519,19 +535,16 @@ const LiveQueue = () => {
           <button type="button" className="btn btn-outline-primary workspace-primary" disabled={!currentSnapshot} onClick={() => setShowShiftSummary(true)}>
             Shift summary
           </button>
+          <Link className="btn btn-outline-secondary workspace-primary" to={`/admin/live-queue/display?date=${encodeURIComponent(selectedDate)}`}
+            target="_blank" rel="opener">
+            Counter display <i className="bi bi-box-arrow-up-right ms-1" aria-hidden="true" />
+          </Link>
           {business && business.businessStatus !== 'Active' && <span id="walk-in-unavailable" className="small text-muted">KYC approval is required to add walk-ins.</span>}
         </div>
       </div>
 
       {showShiftSummary && <ShiftSummary date={selectedDate} tokens={selectedDayTokens} formatTokenNumber={formatTokenNumber}
         stale={Boolean(error)} onClose={() => setShowShiftSummary(false)} />}
-
-      {error && (
-        <div className="alert alert-danger border-0 rounded-3 small mb-4 d-flex align-items-center py-2 shadow-sm" role="alert">
-          <i className="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-          <div>{error}</div>
-        </div>
-      )}
 
       {/* STAGE PROGRESS PATH ROW */}
       <div className="stage-path-container queue-stage-summary mb-4 shadow-sm">

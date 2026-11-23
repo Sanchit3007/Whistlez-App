@@ -5,6 +5,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { AreaTrend, StatusDonut, Legend } from '../../components/Charts';
 import { downloadCsv } from '../../utils/downloadCsv';
 import ReportFilterToolbar from '../../components/ReportFilterToolbar';
+import ReportPeriodComparison from '../../components/ReportPeriodComparison';
 import { useReportFilters } from '../../utils/reportFilterSession';
 
 const defaultFilters = { filterStatus: 'all', searchQuery: '', startDate: '', endDate: '' };
@@ -189,6 +190,7 @@ const AdminReports = () => {
         </div>
       </div>
 
+      <ReportPeriodComparison queue />
       {/* Filter and Search controls */}
       <div className="card p-3 p-md-4 mb-4">
         <div className="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">

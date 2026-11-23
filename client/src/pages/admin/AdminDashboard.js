@@ -1,9 +1,10 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import socket from '../../socket';
 import { api } from '../../context/AuthContext';
 import { BarTrend } from '../../components/Charts';
 import { Skeleton } from '../../components/Skeleton';
+import LiveStatus from '../../components/LiveStatus';
 
 const AdminDashboard = () => {
   const [metrics, setMetrics] = useState(null);
@@ -16,19 +17,29 @@ const AdminDashboard = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [snapshot, setSnapshot] = useState(null);
+  const [refreshing, setRefreshing] = useState(true);
+  const activeRequest = useRef(null);
 
   const fetchDashboardData = useCallback(async () => {
+    activeRequest.current?.abort();
+    const request = new AbortController();
+    activeRequest.current = request;
+    const config = { signal: request.signal };
+    setRefreshing(true);
     try {
       const prevDay = new Date(`${selectedDate}T00:00:00`);
       prevDay.setDate(prevDay.getDate() - 1);
       const prevKey = `${prevDay.getFullYear()}-${String(prevDay.getMonth() + 1).padStart(2, '0')}-${String(prevDay.getDate()).padStart(2, '0')}`;
 
       const [metricsRes, businessRes, tokensRes, prevRes] = await Promise.all([
-        api.get(`/admin/metrics?date=${selectedDate}`),
-        api.get('/admin/business'),
-        api.get(`/admin/tokens?date=${selectedDate}`),
-        api.get(`/admin/metrics?date=${prevKey}`).catch(() => null)
+        api.get(`/admin/metrics?date=${selectedDate}`, config),
+        api.get('/admin/business', config),
+        api.get(`/admin/tokens?date=${selectedDate}`, config),
+        api.get(`/admin/metrics?date=${prevKey}`, config).catch(() => null)
       ]);
+      if (request.signal.aborted) return;
+      if (![metricsRes, businessRes, tokensRes].every(response => response.data.success)) throw new Error('Incomplete dashboard response.');
 
       if (prevRes && prevRes.data && prevRes.data.success) {
         setPrevMetrics(prevRes.data.metrics);
@@ -79,17 +90,23 @@ const AdminDashboard = () => {
         setLastCompletedToken(completed[0] ? formatTokenNum(completed[0].tokenNumber) : 'None');
       }
       setError('');
+      setSnapshot({ date: selectedDate, at: new Date() });
     } catch (err) {
+      if (request.signal.aborted) return;
       console.error('Error fetching dashboard details', err);
       setError('Could not retrieve dashboard information.');
     } finally {
-      setLoading(false);
+      if (!request.signal.aborted) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [selectedDate]);
 
   // Re-fetch whenever selectedDate changes
   useEffect(() => {
     fetchDashboardData();
+    return () => activeRequest.current?.abort();
   }, [fetchDashboardData]);
 
   // Real-time socket connections listener
@@ -97,10 +114,17 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (!businessId) return;
 
-    socket.emit('joinBusiness', businessId);
+    const joinBusiness = () => socket.emit('joinBusiness', businessId);
+    const reconnect = () => {
+      joinBusiness();
+      fetchDashboardData();
+    };
+    if (socket.connected) joinBusiness();
+    socket.on('connect', reconnect);
     socket.on('tokenUpdated', fetchDashboardData);
 
     return () => {
+      socket.off('connect', reconnect);
       socket.off('tokenUpdated', fetchDashboardData);
     };
   }, [businessId, fetchDashboardData]);
@@ -199,6 +223,8 @@ const AdminDashboard = () => {
         <div>
           <h1 className="fw-extrabold text-dark mb-1">Queue overview</h1>
           {business?.name && <p className="text-muted mb-0">{business.name}</p>}
+          <LiveStatus updatedAt={snapshot?.date === selectedDate ? snapshot.at : null}
+            stale={Boolean(error)} refreshing={refreshing} onRetry={fetchDashboardData} />
         </div>
         <div className="workspace-actions">
           <label className="workspace-field">
@@ -215,12 +241,6 @@ const AdminDashboard = () => {
           </Link>
         </div>
       </div>
-
-      {error && (
-        <div className="alert alert-danger border-0 rounded-3 small mb-4" role="alert">
-          {error}
-        </div>
-      )}
 
       <div className="dashboard-feature-grid mb-4">
         <section className="dash-card counter-overview" aria-label="Counter overview">

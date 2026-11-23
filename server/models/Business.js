@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { KYC_NOTIFICATION_STATUSES } = require('../utils/kycActivity');
 
 const BusinessSchema = new mongoose.Schema(
   {
@@ -97,6 +98,15 @@ const BusinessSchema = new mongoose.Schema(
       type: String,
       enum: ['Pending', 'Submitted', 'Under Review', 'Approved', 'Rejected', 'Resubmission Required'],
       default: 'Pending'
+    },
+    kycActivity: {
+      type: [{
+        status: { type: String, enum: KYC_NOTIFICATION_STATUSES, required: true },
+        occurredAt: Date,
+        legacy: { type: Boolean, default: false }
+      }],
+      default: [],
+      select: false
     },
     kycDetails: {
       phoneNumber: { type: String },

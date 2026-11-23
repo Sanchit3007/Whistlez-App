@@ -139,6 +139,77 @@
   align-items: end;
 }
 
+.workspace-live-status {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .4rem .65rem;
+}
+.workspace-live-status[data-attention="true"] {
+  padding: .35rem .5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--warn-soft);
+}
+.workspace-live-status .btn { min-height: 36px; }
+
+.queue-counter-display {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  padding: clamp(1rem, 3vw, 2rem);
+  background: var(--canvas);
+  color: var(--ink);
+}
+.queue-counter-header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .55rem; }
+.queue-counter-body {
+  width: min(100%, 64rem);
+  margin: auto;
+  display: grid;
+  justify-items: center;
+  gap: clamp(.9rem, 3vw, 1.85rem);
+  padding-block: 1rem;
+  text-align: center;
+}
+.queue-counter-body h1 { margin: 0; overflow-wrap: anywhere; }
+.queue-counter-tokens {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .8rem;
+  width: 100%;
+}
+.queue-counter-tokens > div {
+  min-width: 0;
+  padding: clamp(.9rem, 3.5vw, 2.5rem);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.queue-counter-tokens > div:first-child { border-color: var(--accent); }
+.queue-counter-tokens p { margin: 0; color: var(--ink-2); }
+.queue-counter-tokens strong {
+  display: block;
+  color: var(--accent);
+  font-size: clamp(2.6rem, 9vw, 7rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.14;
+  overflow-wrap: anywhere;
+}
+
+.report-period-comparison .workspace-field { flex: 0 1 10rem; }
+.report-period-summary dl { display: flex; flex-wrap: wrap; gap: .7rem 1.6rem; margin: 0 0 .35rem; }
+.report-period-summary dt { color: var(--ink-2); font-size: .85rem; }
+.report-period-summary dt span { display: block; font-size: .75rem; font-weight: 400; }
+.report-period-summary dd { margin-bottom: 0; color: var(--ink); font-size: 1.45rem; font-weight: 700; }
+.report-period-summary dd:first-of-type { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 767.98px) {
+  .workspace-live-status[data-attention="false"] { display: none; }
+  .workspace-live-status[data-attention="true"] { margin-block: .4rem; }
+  .workspace-live-status .btn { min-height: 44px; }
+  .queue-counter-tokens { grid-template-columns: minmax(0, 1fr); }
+}
+
 .business-search { grid-column: 1 / -1; }
 
 .report-filter-toolbar { display: grid; gap: .75rem; margin-bottom: 1rem; align-items: start; }

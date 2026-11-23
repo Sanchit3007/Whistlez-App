@@ -37,6 +37,7 @@ const {
   getTrendingHistorySummary
 } = require('../controllers/trendingController');
 const { protect, authorize } = require('../middleware/auth');
+const { getKycNotifications } = require('../controllers/notificationController');
 
 // All routes require authentication and superadmin role
 router.use(protect);
@@ -45,6 +46,7 @@ router.use(authorize('superadmin'));
 // KYC Requests
 router.get('/kyc-requests', getKycRequests);
 router.put('/kyc-requests/:businessId/status', updateKycStatus);
+router.get('/notifications/kyc', getKycNotifications);
 
 router.get('/businesses', getBusinesses);
 router.get('/businesses/:id', getBusinessDetail);
