@@ -1,0 +1,103 @@
+.kyc-list-toolbar {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(.75rem, 2vw, 1.2rem);
+  border-bottom: 1px solid var(--line);
+}
+
+.kyc-search-fields,
+.kyc-preview-actions,
+.kyc-mobile-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+}
+
+.kyc-search-fields {
+  align-items: end;
+  gap: .65rem 1rem;
+}
+
+.kyc-search-fields > .workspace-field {
+  flex: 1 1 12rem;
+  max-width: 20rem;
+  min-width: 0;
+}
+
+.kyc-results-count {
+  margin: 0 0 .55rem auto;
+  color: var(--ink-2);
+  font-size: .85rem;
+}
+
+.kyc-list-message {
+  display: grid;
+  justify-items: center;
+  gap: .6rem;
+  padding: clamp(1rem, 4vw, 2.2rem);
+  text-align: center;
+  color: var(--ink-2);
+}
+
+.kyc-list-message > .bi { font-size: 1.5rem; color: var(--accent); }
+.kyc-list-message .btn,
+.kyc-preview-actions .btn,
+.kyc-workspace .card-header .btn { min-height: 44px; }
+
+.kyc-date-age { display: block; color: var(--ink-2); }
+.kyc-mobile-details {
+  justify-content: space-between;
+  margin: .55rem 0 .75rem;
+  color: var(--ink-2);
+  font-size: .8rem;
+}
+.kyc-mobile-details .kyc-date-age { display: inline; margin-inline-start: .5rem; }
+
+.kyc-document-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: .5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.kyc-document-choice {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  justify-content: space-between;
+  align-items: center;
+  gap: .5rem;
+  padding: .45rem .65rem;
+  text-align: start;
+  font-size: .85rem;
+}
+
+.kyc-document-choice small { color: var(--ink-2); white-space: nowrap; }
+.kyc-preview-actions { margin-top: .75rem; }
+
+.kyc-workspace .kyc-document-preview { min-height: clamp(10rem, 30svh, 18rem); }
+.kyc-workspace .kyc-document-preview img {
+  width: 100%;
+  max-height: 65svh;
+}
+
+.kyc-preview-dialog .modal-body {
+  min-height: 0;
+  overflow: auto;
+  background: var(--canvas);
+}
+
+.kyc-preview-dialog img { display: block; width: 100%; margin-inline: auto; }
+.kyc-preview-close { min-width: 44px; min-height: 44px; }
+
+@media (max-width: 575.98px) {
+  .kyc-search-fields > .workspace-field { flex-basis: 100%; max-width: none; }
+  .kyc-search-fields :is(input, select) { font-size: 1rem; }
+  .kyc-results-count { margin: 0; }
+}
+
+@media (min-width: 1100px) {
+  .kyc-workspace .kyc-review-grid { grid-template-columns: minmax(0, .8fr) minmax(0, 1.4fr); }
+}

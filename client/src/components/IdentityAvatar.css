@@ -1,0 +1,35 @@
+.identity-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  inline-size: var(--identity-avatar-size);
+  block-size: var(--identity-avatar-size);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--avatar-ink) 22%, transparent);
+  border-radius: 50%;
+  background: var(--avatar-surface);
+  color: var(--avatar-ink);
+  font-size: calc(var(--identity-avatar-size) * .34);
+  font-weight: 750;
+  line-height: 1;
+}
+
+.identity-avatar-business { border-radius: 25%; }
+.identity-avatar img { display: block; width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.identity-avatar[data-tone="rose"]   { --avatar-surface: #fce8ef; --avatar-ink: #85224b; }
+.identity-avatar[data-tone="plum"]   { --avatar-surface: #f1e6fa; --avatar-ink: #653188; }
+.identity-avatar[data-tone="indigo"] { --avatar-surface: #e9e8fc; --avatar-ink: #464096; }
+.identity-avatar[data-tone="blue"]   { --avatar-surface: #e3f0fb; --avatar-ink: #1f537e; }
+.identity-avatar[data-tone="teal"]   { --avatar-surface: #ddf5f0; --avatar-ink: #16615d; }
+.identity-avatar[data-tone="green"]  { --avatar-surface: #e8f3df; --avatar-ink: #395f25; }
+.identity-avatar[data-tone="amber"]  { --avatar-surface: #fff0d9; --avatar-ink: #784615; }
+.identity-avatar[data-tone="slate"]  { --avatar-surface: #e9eef3; --avatar-ink: #46586a; }
+
+[data-theme="dark"] .identity-avatar[data-tone="rose"]   { --avatar-surface: #492537; --avatar-ink: #ffb8d1; }
+[data-theme="dark"] .identity-avatar[data-tone="plum"]   { --avatar-surface: #3d2b4c; --avatar-ink: #e4c2ff; }
+[data-theme="dark"] .identity-avatar[data-tone="indigo"] { --avatar-surface: #373451; --avatar-ink: #cac5ff; }
+[data-theme="dark"] .identity-avatar[data-tone="blue"]   { --avatar-surface: #253c54; --avatar-ink: #a9d4ff; }
+[data-theme="dark"] .identity-avatar[data-tone="teal"]   { --avatar-surface: #21423f; --avatar-ink: #9ae6da; }
+[data-theme="dark"] .identity-avatar[data-tone="green"]  { --avatar-surface: #30422b; --avatar-ink: #c0e8a9; }
+[data-theme="dark"] .identity-avatar[data-tone="amber"]  { --avatar-surface: #493624; --avatar-ink: #ffcf91; }
+[data-theme="dark"] .identity-avatar[data-tone="slate"]  { --avatar-surface: #34404d; --avatar-ink: #cfdfef; }

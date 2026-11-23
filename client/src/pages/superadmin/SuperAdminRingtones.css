@@ -1,0 +1,176 @@
+.ringtone-card.card {
+  gap: 1rem;
+  padding: clamp(.85rem, 2.5vw, 1.4rem);
+  overflow: visible;
+}
+
+.ringtone-card-header,
+.ringtone-card-identity,
+.ringtone-card-status.form-switch,
+.ringtone-preview-controls,
+.ringtone-card-actions {
+  display: flex;
+  align-items: center;
+}
+
+.ringtone-card-header {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .25rem 1rem;
+}
+
+.ringtone-card-identity {
+  flex: 1 1 10rem;
+  gap: .75rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ringtone-card-icon {
+  display: grid;
+  flex: 0 0 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 1.2rem;
+}
+
+.ringtone-card-identity h2 {
+  margin: 0 0 .2rem;
+  color: var(--ink);
+  font-size: 1.1rem;
+  font-weight: 750;
+}
+
+.ringtone-card-identity p,
+.ringtone-card-status.form-switch {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: .8rem;
+}
+
+.ringtone-card-status.form-switch {
+  gap: .5rem;
+  min-height: 44px;
+  margin-inline-start: auto;
+  padding: 0;
+  cursor: pointer;
+}
+
+.ringtone-card-status .form-check-input {
+  float: none;
+  margin: 0;
+  cursor: pointer;
+}
+
+.ringtone-card-status:has(input:checked) { color: var(--accent); }
+
+.ringtone-duration {
+  display: grid;
+  padding: .5rem .85rem .85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--canvas);
+  font-size: .875rem;
+}
+
+.ringtone-duration-heading,
+.ringtone-duration-actions,
+.ringtone-duration-endpoints {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .35rem .75rem;
+}
+
+.ringtone-duration-heading { color: var(--ink); font-weight: 700; }
+
+.ringtone-preview-controls {
+  margin-inline: auto -.35rem;
+  color: var(--ink-2);
+  font-weight: 500;
+}
+
+.ringtone-preview-controls strong {
+  color: var(--accent);
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ringtone-duration-slider {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.ringtone-duration-slider:disabled { cursor: default; }
+.ringtone-duration-slider:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.ringtone-duration-endpoints,
+.ringtone-duration-summary,
+.ringtone-playback-position {
+  color: var(--ink-2);
+  font-size: .78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ringtone-playback-position {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .5rem;
+  border-top: 1px solid var(--line);
+  margin-top: .75rem;
+}
+
+.ringtone-duration-actions { margin-top: .75rem; }
+.ringtone-duration-summary { display: grid; gap: .25rem; }
+
+.ringtone-save-status {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+}
+
+.ringtone-save-status.is-unsaved { color: var(--accent); }
+.ringtone-save-status .bi-circle-fill { font-size: .45rem; }
+
+.ringtone-card .ringtone-save-duration,
+.ringtone-card-actions .btn { min-height: 44px; }
+
+.ringtone-card .ringtone-save-duration:disabled {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink-2);
+  opacity: 1;
+}
+
+.ringtone-card-actions {
+  justify-content: flex-end;
+  gap: .5rem;
+  margin-top: auto;
+}
+
+.ringtone-edit-preview {
+  display: inline-grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--accent);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+.ringtone-edit-preview:hover:not(:disabled) { color: var(--ink); }
+.ringtone-edit-preview:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ringtone-edit-preview:disabled { opacity: .5; }

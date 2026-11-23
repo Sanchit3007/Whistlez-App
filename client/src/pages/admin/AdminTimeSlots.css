@@ -1,0 +1,65 @@
+.slot-card {
+  margin-bottom: 1rem;
+  padding: clamp(.85rem, 2vw, 1.25rem);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.slot-date-toolbar, .slot-date-navigation, .slot-date-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .55rem;
+}
+.slot-date-toolbar { justify-content: space-between; }
+.slot-date-navigation time { color: var(--ink); font-size: 1.05rem; font-weight: 700; }
+.slot-date-tools .form-control { width: auto; min-width: 0; }
+.slot-card :is(.btn, .form-control) { min-height: 44px; }
+.slot-date-navigation .btn, .slot-row-actions .btn-outline-danger { min-width: 44px; }
+
+.slot-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .5rem;
+  margin-top: .9rem;
+  border-top: 1px solid var(--line);
+}
+.slot-summary > div { min-width: 0; padding-block-start: .65rem; }
+.slot-summary > div + div { border-inline-start: 1px solid var(--line); padding-inline-start: .65rem; }
+.slot-summary dt { color: var(--ink-2); font-size: .84rem; font-weight: 600; overflow-wrap: anywhere; }
+.slot-summary dd { margin: .15rem 0 0; color: var(--ink); font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.slot-summary > div:last-child dd { color: var(--ok); }
+
+.slot-quick-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: .65rem;
+}
+.slot-quick-form > :is(.slot-quick-capacity, .slot-quick-hint, button) { grid-column: 1 / -1; }
+.slot-quick-hint { color: var(--warn); }
+.slot-empty { display: grid; justify-items: center; gap: .6rem; padding: 1rem .5rem; text-align: center; }
+.slot-empty h3, .slot-mobile-heading h3 { margin: 0; color: var(--ink); font-size: 1rem; }
+
+.slot-desktop-table { display: none; }
+.slot-mobile-list { display: grid; gap: .6rem; margin: 0; padding: 0; list-style: none; }
+.slot-mobile-item { display: grid; gap: .45rem; padding: .75rem; border: 1px solid var(--line); border-radius: var(--r-md); }
+.slot-mobile-heading, .slot-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.slot-mobile-heading { justify-content: space-between; }
+.slot-status { padding: .2rem .5rem; border-radius: var(--r-sm); background: var(--canvas); color: var(--ink-2); font-size: .8rem; font-weight: 700; }
+.slot-status[data-status="Available"] { color: var(--ok); background: var(--ok-soft); }
+.slot-status[data-status="Full"] { color: var(--warn); background: var(--warn-soft); }
+.slot-capacity-track { height: .4rem; margin-bottom: .15rem; overflow: hidden; border-radius: 1rem; background: var(--line); }
+.slot-capacity-track > span { display: block; height: 100%; border-radius: inherit; background: var(--ok); }
+.slot-capacity-track > span[data-status="Full"] { background: var(--warn); }
+.slot-capacity-track > span[data-status="Paused"] { background: var(--ink-3); }
+
+@media (min-width: 768px) {
+  .slot-quick-form { grid-template-columns: repeat(3, minmax(0, 1fr)) auto; }
+  .slot-quick-form > :is(.slot-quick-capacity, button) { grid-column: auto; }
+  .slot-quick-hint { grid-row: 2; }
+  .slot-desktop-table { display: block; }
+  .slot-mobile-list { display: none; }
+}
