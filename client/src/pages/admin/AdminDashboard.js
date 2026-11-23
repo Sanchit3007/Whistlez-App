@@ -228,7 +228,7 @@ const AdminDashboard = () => {
             stale={Boolean(error)} refreshing={refreshing} onRetry={fetchDashboardData} />
         </div>
         <div className="workspace-actions">
-          <FilterToolbar summary={selectedDate}>
+          <FilterToolbar>
             <label className="workspace-field">
               <span>Queue date</span>
               <input

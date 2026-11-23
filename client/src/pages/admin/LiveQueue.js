@@ -66,9 +66,9 @@ const ShiftSummary = ({ date, tokens, formatTokenNumber, stale, onClose }) => {
   );
 };
 
-const QueueTicketCard = ({ number, customerName, className, children }) => (
+const QueueTicketCard = ({ number, customerName, className, summaryRef, children }) => (
   <details className={`kanban-card queue-ticket-card ${className}`}>
-    <summary className="queue-ticket-summary">
+    <summary ref={summaryRef} className="queue-ticket-summary">
       <span className="token-pill">{number}</span>
       <span className="kanban-card-title">{customerName}</span>
       <i className="bi bi-chevron-down" aria-hidden="true" />
@@ -77,8 +77,11 @@ const QueueTicketCard = ({ number, customerName, className, children }) => (
   </details>
 );
 
-const QueueCardPage = ({ tickets, stage, children }) => {
-  const [page, setPage] = useState(0);
+const QueueCardPage = ({ tickets, stage, revealId, children }) => {
+  const [page, setPage] = useState(() => {
+    const index = revealId ? tickets.findIndex(ticket => ticket._id === revealId) : 0;
+    return Math.max(0, Math.floor(index / CARDS_PER_PAGE));
+  });
   const lastPage = Math.max(0, Math.ceil(tickets.length / CARDS_PER_PAGE) - 1);
   const currentPage = Math.min(page, lastPage);
   const start = currentPage * CARDS_PER_PAGE;
@@ -122,6 +125,7 @@ const LiveQueue = ({ counterDisplay = false }) => {
   const queueRequest = useRef(null);
   const [callPreview, setCallPreview] = useState(null);
   const [calling, setCalling] = useState(false);
+  const [completing, setCompleting] = useState(false);
   const [callError, setCallError] = useState('');
   const toast = useToast();
   const knownIds = useRef(null);
@@ -141,6 +145,8 @@ const LiveQueue = ({ counterDisplay = false }) => {
   // Selected Token for Detail Drawer
   const [selectedToken, setSelectedToken] = useState(null);
   const [activeStage, setActiveStage] = useState('nextup');
+  const [movedTicket, setMovedTicket] = useState(null);
+  const movedTicketSummary = useRef(null);
   const detailsDialog = useRef(null);
   const detailsTrigger = useRef(null);
   const queueHeading = useRef(null);
@@ -201,6 +207,16 @@ const LiveQueue = ({ counterDisplay = false }) => {
   ));
   const [postponeDate, setPostponeDate] = useState(new Date(Date.now() + 86400000).toISOString().split('T')[0]);
   const [postponing, setPostponing] = useState(false);
+  const viewedDate = useRef(selectedDate);
+
+  useEffect(() => {
+    viewedDate.current = selectedDate;
+    return () => { viewedDate.current = null; };
+  }, [selectedDate]);
+
+  useEffect(() => {
+    if (movedTicket?.date === selectedDate) movedTicketSummary.current?.focus();
+  }, [movedTicket, selectedDate]);
 
   useEffect(() => {
     if (linkedToken && /^\d{4}-\d{2}-\d{2}$/.test(linkedDate || '') && linkedDate !== selectedDate) {
@@ -376,6 +392,18 @@ const LiveQueue = ({ counterDisplay = false }) => {
     }
   };
 
+  const showUpdatedTicket = (token, stage) => {
+    if (viewedDate.current !== selectedDate) return;
+    // The update response contains the new status and timestamps. Keep the
+    // customer details already populated by the queue listing.
+    setTokens(current => current.map(ticket => ticket._id === token._id
+      ? { ...ticket, status: stage, calledAt: token.calledAt, completedAt: token.completedAt }
+      : ticket));
+    setActiveStage(stage);
+    setMovedTicket(previous => ({ id: token._id, stage, date: selectedDate, revision: (previous?.revision || 0) + 1 }));
+    return fetchLiveQueueData();
+  };
+
   const handleCallToken = async (tokenId) => {
     if (calling) return;
     setCalling(true);
@@ -385,28 +413,32 @@ const LiveQueue = ({ counterDisplay = false }) => {
       if (res.data.success) {
         toast.success(`Token #${res.data.token.tokenNumber} called to serving desk.`);
         setCallPreview(null);
-        await fetchLiveQueueData();
+        await showUpdatedTicket(res.data.token, 'serving');
       }
     } catch (err) {
       const message = err.response?.data?.message || 'Could not call this token. Try again.';
       if (callPreview) setCallError(message);
       else toast.error(message);
-      if (err.response?.status === 409) await fetchLiveQueueData();
+      if (err.response?.status === 409 && viewedDate.current === selectedDate) await fetchLiveQueueData();
     } finally {
       setCalling(false);
     }
   };
 
   const handleCompleteToken = async (tokenId) => {
+    if (completing) return;
+    setCompleting(true);
     try {
       const res = await api.put(`/admin/tokens/${tokenId}/status`, { status: 'completed' });
       if (res.data.success) {
         toast.success(`Token #${res.data.token.tokenNumber} marked completed.`);
-        fetchLiveQueueData();
+        await showUpdatedTicket(res.data.token, 'completed');
       }
     } catch (err) {
       console.error('Error completing token', err);
       toast.error('Failed to complete token.');
+    } finally {
+      setCompleting(false);
     }
   };
 
@@ -463,6 +495,8 @@ const LiveQueue = ({ counterDisplay = false }) => {
   
   const servingList = selectedDayTokens.filter(t => t.status === 'serving');
   const completedList = selectedDayTokens.filter(t => t.status === 'completed' || t.status === 'skipped' || t.status === 'cancelled' || t.status === 'postponed');
+  const servingMove = movedTicket?.date === selectedDate && movedTicket.stage === 'serving' ? movedTicket : null;
+  const completedMove = movedTicket?.date === selectedDate && movedTicket.stage === 'completed' ? movedTicket : null;
 
   // Wait meter: elapsed minutes vs the expected wait (service time x position in line)
   const serviceMins = business?.queueConfig?.serviceTime || 15;
@@ -503,7 +537,7 @@ const LiveQueue = ({ counterDisplay = false }) => {
         </div>
 
         <div className="workspace-actions">
-          <FilterToolbar summary={selectedDate}>
+          <FilterToolbar>
             <label className="workspace-field">
               <span>Queue date</span>
               <input
@@ -623,8 +657,8 @@ const LiveQueue = ({ counterDisplay = false }) => {
         </div>
         <div className="ns-actions">
           {nowServing && (
-            <button type="button" className="ns-btn ghost" onClick={() => handleCompleteToken(nowServing._id)}>
-              Complete
+            <button type="button" className="ns-btn ghost" disabled={completing} onClick={() => handleCompleteToken(nowServing._id)}>
+              {completing ? 'Completing…' : 'Complete'}
             </button>
           )}
           <div className="d-grid gap-1">
@@ -795,13 +829,14 @@ const LiveQueue = ({ counterDisplay = false }) => {
                   <SkeletonTokenCard />
                 </>
               ) : servingList.length > 0 ? (
-                <QueueCardPage key={selectedDate} tickets={servingList} stage="Serving">
+                <QueueCardPage key={`${selectedDate}:${servingMove?.revision || 0}`} tickets={servingList} stage="Serving" revealId={servingMove?.id}>
                   {t => (
                     <QueueTicketCard
                       key={t._id} 
                       number={formatTokenNumber(t.tokenNumber)}
                       customerName={t.customerName}
-                      className="kanban-card-border-serving is-serving"
+                      className={`kanban-card-border-serving is-serving${servingMove?.id === t._id ? ' is-new' : ''}`}
+                      summaryRef={servingMove?.id === t._id ? movedTicketSummary : undefined}
                     >
                       <div className="kanban-card-subtext text-success fw-semibold">
                         <i className="bi bi-play-circle me-1" aria-hidden="true"></i> Serving {getMinutesElapsed(t.calledAt)}m
@@ -819,9 +854,10 @@ const LiveQueue = ({ counterDisplay = false }) => {
                         </button>
                         <button 
                           className="btn btn-success btn-sm flex-grow-1 py-1 rounded-3 fw-bold border-0"
+                          disabled={completing}
                           onClick={() => handleCompleteToken(t._id)}
                         >
-                          Complete
+                          {completing ? 'Completing…' : 'Complete'}
                         </button>
                       </div>
                     </QueueTicketCard>
@@ -851,13 +887,14 @@ const LiveQueue = ({ counterDisplay = false }) => {
                   <SkeletonTokenCard />
                 </>
               ) : completedList.length > 0 ? (
-                <QueueCardPage key={selectedDate} tickets={completedList} stage="Completed">
+                <QueueCardPage key={`${selectedDate}:${completedMove?.revision || 0}`} tickets={completedList} stage="Completed" revealId={completedMove?.id}>
                   {t => (
                     <QueueTicketCard
                       key={t._id} 
                       number={formatTokenNumber(t.tokenNumber)}
                       customerName={t.customerName}
-                      className="kanban-card-border-completed"
+                      className={`kanban-card-border-completed${completedMove?.id === t._id ? ' is-new' : ''}`}
+                      summaryRef={completedMove?.id === t._id ? movedTicketSummary : undefined}
                     >
                       <div className="mb-2">
                         <span className={`badge rounded-pill ${

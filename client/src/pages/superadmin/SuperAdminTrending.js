@@ -1112,7 +1112,7 @@ const SuperAdminTrending = () => {
               <h5 className="fw-black text-dark mb-0">Upcoming & Active Schedules</h5>
               <span className="text-muted small">Timeline views of date-bound trending topics</span>
             </div>
-            <FilterToolbar summary={filterDate}>
+            <FilterToolbar>
               <input aria-label="Schedule date"
                 type="date"
                 className="form-control form-control-sm"

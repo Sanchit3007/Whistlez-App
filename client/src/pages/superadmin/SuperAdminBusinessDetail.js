@@ -302,7 +302,7 @@ const SuperAdminBusinessDetail = () => {
                 <h5 className="fw-bold text-dark mb-0">
                   <i className="bi bi-bar-chart-line text-primary me-2"></i> Token Analytics
                 </h5>
-                <FilterToolbar summary={analyticsFilter}>
+                <FilterToolbar>
                   {(() => {
                     const periods = ['daily', 'weekly', 'monthly', 'yearly'];
                     const currentIdx = periods.indexOf(analyticsFilter);

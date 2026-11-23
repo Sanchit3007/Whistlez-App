@@ -1,5 +1,4 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
-import FilterToolbar from '../../components/FilterToolbar';
 import FormDialog from '../../components/FormDialog';
 import UnsavedChanges from '../../components/UnsavedChanges';
 import { useAuth, api } from '../../context/AuthContext';
@@ -47,6 +46,7 @@ const AdminTimeSlots = () => {
   const [schedule, setSchedule] = useState(null);
   const [availability, setAvailability] = useState(null);
   const scheduleRequest = useRef(null);
+  const mobileDateInput = useRef(null);
   const slotList = useRef(null);
   const pendingSlotJump = useRef(null);
   const quickStart = useRef(null);
@@ -279,17 +279,28 @@ const AdminTimeSlots = () => {
     </div>
   );
 
+  const openAdvancedAdd = () => {
+    setError('');
+    setCreateDate(selectedDate);
+    setAdvancedSlot(newSlot);
+    setAdvancedBaseline(newSlot);
+    setShowModal(true);
+  };
+  const dateInputProps = {
+    type: 'date',
+    'aria-label': 'Time slot date',
+    value: selectedDate,
+    disabled: savingSlot,
+    onChange: event => {
+      if (event.target.value) setSelectedDate(event.target.value);
+    }
+  };
+
   return (
     <div className="container-fluid">
       <div className="workspace-heading">
         <h1>Time Slot Management</h1>
-        <button type="button" className="btn btn-outline-primary" disabled={savingSlot} onClick={() => {
-          setError('');
-          setCreateDate(selectedDate);
-          setAdvancedSlot(newSlot);
-          setAdvancedBaseline(newSlot);
-          setShowModal(true);
-        }}>
+        <button type="button" className="btn btn-outline-primary d-none d-lg-inline-flex align-items-center" disabled={savingSlot} onClick={openAdvancedAdd}>
           <i className="bi bi-calendar-plus me-1" aria-hidden="true" /> Add for another date
         </button>
       </div>
@@ -311,19 +322,25 @@ const AdminTimeSlots = () => {
             <button type="button" className="btn btn-outline-secondary" aria-label="Previous day" onClick={() => changeDate(-1)} disabled={savingSlot}>
               <i className="bi bi-chevron-left" aria-hidden="true" />
             </button>
-            <time dateTime={selectedDate}>{formatDay(selectedDate)}</time>
+            <time className="d-none d-lg-inline" dateTime={selectedDate}>{formatDay(selectedDate)}</time>
+            <div className="slot-mobile-date d-lg-none">
+              <span aria-hidden="true">{formatDay(selectedDate)} <i className="bi bi-chevron-down" /></span>
+              <input {...dateInputProps} ref={mobileDateInput} />
+            </div>
             <button type="button" className="btn btn-outline-secondary" aria-label="Next day" onClick={() => changeDate(1)} disabled={savingSlot}>
               <i className="bi bi-chevron-right" aria-hidden="true" />
             </button>
           </div>
-          <div className="slot-date-tools">
+          <div className="slot-date-tools d-none d-lg-flex">
             <button type="button" className="btn btn-outline-primary" onClick={() => setSelectedDate(getToday())} disabled={savingSlot}>Today</button>
-            <FilterToolbar>
-              <input type="date" className="form-control" aria-label="Time slot date" value={selectedDate} disabled={savingSlot} onChange={event => {
-                if (event.target.value) setSelectedDate(event.target.value);
-              }} />
-            </FilterToolbar>
+            <input {...dateInputProps} className="form-control" />
           </div>
+          {selectedDate !== getToday() && (
+            <button type="button" className="btn btn-link slot-back-today d-lg-none" disabled={savingSlot} onClick={() => {
+              setSelectedDate(getToday());
+              mobileDateInput.current?.focus({ preventScroll: true });
+            }}>Back to today</button>
+          )}
         </div>
         <dl className="slot-summary mb-0">
           <div><dt>Slots</dt><dd>{day && !day.error ? slots.length : '—'}</dd></div>
@@ -333,9 +350,12 @@ const AdminTimeSlots = () => {
       </section>
 
       <section className="slot-card" aria-labelledby="quick-slot-title">
-        <h2 id="quick-slot-title" className="portal-form-section-title">
-          <i className="bi bi-lightning-charge portal-form-icon" aria-hidden="true" /> Quick add
-        </h2>
+        <div className="slot-quick-heading">
+          <h2 id="quick-slot-title" className="portal-form-section-title">
+            <i className="bi bi-lightning-charge portal-form-icon" aria-hidden="true" /> Quick add
+          </h2>
+          <button type="button" className="btn btn-link d-lg-none" disabled={savingSlot} onClick={openAdvancedAdd}>Add for another date</button>
+        </div>
         <form ref={quickForm} className="slot-quick-form" onSubmit={handleCreateSlot}>
           <div>
             <label htmlFor="slots-start-time" className="form-label">Start time</label>

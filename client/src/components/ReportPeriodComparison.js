@@ -64,7 +64,7 @@ const ReportPeriodComparison = ({ queue = false, compact = false }) => {
           <h2 id={titleId} className="h5 mb-1">{queue ? 'Average wait comparison' : 'Business registrations comparison'}</h2>
           <p className="small text-muted mb-0">{queue ? 'Average time from ticket creation to first call' : 'New businesses registered'} · Complete days in UTC</p>
         </div>
-        <FilterToolbar summary={`Last ${days} days`}>
+        <FilterToolbar>
           <label className="workspace-field">
             <span>Comparison period</span>
             <select className="form-select" value={days} onChange={event => setDays(Number(event.target.value))}>

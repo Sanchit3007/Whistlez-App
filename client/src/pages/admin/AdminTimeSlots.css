@@ -73,6 +73,48 @@
 .slot-mobile-item.slot-next-highlight { background-color: var(--accent-soft); }
 .slot-next-highlight:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
+@media (max-width: 991.98px) {
+  .slot-date-toolbar { display: grid; gap: 0; }
+  .slot-date-navigation { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; }
+  .slot-mobile-date {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: 44px;
+    padding: .35rem;
+    border-radius: var(--r-sm);
+    background: var(--field-bg);
+    color: var(--ink);
+    font-weight: 700;
+    text-align: center;
+  }
+  .slot-mobile-date:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .slot-mobile-date:has(input:disabled) { opacity: .6; }
+  .slot-mobile-date i { margin-inline-start: .2rem; font-size: .75em; color: var(--accent); }
+  .slot-mobile-date input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .slot-mobile-date input::-webkit-calendar-picker-indicator {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    cursor: inherit;
+  }
+  .slot-back-today { justify-self: center; }
+  .slot-quick-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .25rem .5rem; margin-bottom: .5rem; }
+  .slot-quick-heading .portal-form-section-title { margin: 0; }
+  .slot-quick-heading .btn-link, .slot-back-today { padding-inline: .25rem; font-size: .875rem; }
+}
+
 @media (min-width: 768px) {
   .slot-quick-form { grid-template-columns: repeat(3, minmax(0, 1fr)) auto; }
   .slot-quick-form > :is(.slot-quick-capacity, button) { grid-column: auto; }

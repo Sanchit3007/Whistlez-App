@@ -323,7 +323,7 @@ const SuperAdminDashboard = () => {
           <div className="card border-0 p-3 p-md-4 bg-white shadow-sm rounded-4 h-100">
             <div className="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-4">
               <h2 className="dash-card-title">Business registrations</h2>
-              <FilterToolbar summary={growthFilter}>
+              <FilterToolbar>
                 <select
                   className="form-select form-select-sm"
                   style={{ width: '120px' }}

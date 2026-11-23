@@ -188,7 +188,7 @@ const SuperAdminLiveMobile = () => {
                     {test ? (test.usesSamples ? 'Sample feed' : 'Test mode') : 'Live preview'}
                   </span>
                 </div>
-                <FilterToolbar className="trend-category-filter" summary={category}>
+                <FilterToolbar className="trend-category-filter">
                   <div className="trend-categories" role="group" aria-label="Trending categories">
                     {feedCategories.map(option => (
                       <button type="button" key={option} ref={option === 'All' ? allCategoriesButton : undefined} aria-pressed={category === option} onClick={() => setCategory(option)}>{option}</button>

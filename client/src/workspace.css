@@ -234,20 +234,30 @@
 }
 
 .filter-toolbar { display: grid; gap: .75rem; min-width: 0; align-items: start; }
-.filter-search-row { display: flex; justify-content: flex-end; gap: .5rem; align-items: end; }
-.filter-search-row > .workspace-field { flex: 1; min-width: 0; }
-.filter-toggle { display: inline-flex; align-items: center; gap: .35rem; max-width: 100%; min-height: 44px; white-space: nowrap; }
-.filter-summary { min-width: 0; overflow: hidden; text-overflow: ellipsis; border-inline-start: 1px solid currentColor; padding-inline-start: .35rem; font-size: .8em; }
-.filter-options, .filter-fields { display: grid; gap: .65rem; }
-.filter-options { min-width: 0; }
-.filter-fields { grid-template-columns: minmax(0, 1fr); align-items: end; }
+.filter-toggle { display: inline-flex; justify-self: end; align-items: center; gap: .35rem; min-height: 44px; white-space: nowrap; }
+.filter-fields { display: grid; gap: .65rem; grid-template-columns: minmax(0, 1fr); align-items: end; }
 .filter-options > .btn { justify-self: start; }
 .report-filter-toolbar { margin-bottom: 1rem; }
 
 @media (max-width: 991.98px) {
+  .filter-toolbar-with-search { grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: .5rem; }
   .filter-toolbar :is(input:not([type="checkbox"]), select) { min-height: 44px; font-size: 16px; }
-  .filter-options[data-open="false"] { display: none; }
-  .filter-options { padding: .75rem; border: 1px solid var(--line); border-radius: var(--r-sm); }
+  .filter-options.show { display: grid; gap: .75rem; }
+  .filter-toolbar .filter-options {
+    width: min(20rem, calc(100vw - 2rem));
+    min-width: 0;
+    max-height: min(21rem, 52dvh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: .75rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    color: var(--ink);
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
+    z-index: 60;
+  }
+  .filter-card-heading { padding-bottom: .55rem; border-bottom: 1px solid var(--line); font-weight: 700; }
 }
 
 .business-identity, .business-directory-card .list-group-item > * {
@@ -552,8 +562,19 @@
 
 @media (min-width: 992px) {
   .filter-toolbar-with-search { grid-template-columns: minmax(0, 1.2fr) minmax(0, var(--filter-width)); }
-  .filter-toolbar:not(.filter-toolbar-with-search) > .filter-search-row,
   .filter-toggle { display: none; }
+  .filter-toolbar .filter-options {
+    display: grid;
+    gap: .65rem;
+    position: static !important;
+    transform: none !important;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    margin: 0;
+    background: transparent !important;
+    box-shadow: none;
+  }
   .filter-fields { grid-template-columns: repeat(var(--filter-columns, 1), minmax(0, 1fr)); }
   .filter-options > .btn { justify-self: end; }
   :root { --sidebar-width: 220px; }
