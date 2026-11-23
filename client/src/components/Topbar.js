@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import IdentityAvatar from './IdentityAvatar';
+import WorkspaceNotifications from './WorkspaceNotifications';
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -34,6 +35,7 @@ const Topbar = ({ sidebarOpen = true }) => {
         <div className="topbar-date">{today}</div>
       </div>
       <div className="topbar-right">
+        <WorkspaceNotifications user={user} />
         <div className="dropdown topbar-profile">
           <button
             id="topbar-profile-button"

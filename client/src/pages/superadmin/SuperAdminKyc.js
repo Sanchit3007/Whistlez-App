@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import FormDialog from '../../components/FormDialog';
 import { api } from '../../context/AuthContext';
 import { needsKycReview, verificationDocuments } from '../../utils/businessStatus';
@@ -126,6 +127,7 @@ const KycDocuments = ({ documents }) => {
 };
 
 const SuperAdminKyc = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedKyc, setSelectedKyc] = useState(null);
@@ -161,6 +163,23 @@ const SuperAdminKyc = () => {
   useEffect(() => {
     fetchRequests();
   }, []);
+
+  useEffect(() => {
+    const applicationId = searchParams.get('application');
+    if (!applicationId || loading || loadError) return;
+    const application = requests.find(request => request._id === applicationId);
+    if (application) {
+      setDecision('');
+      setActionReason('');
+      setCorrectionDocument('');
+      setDecisionError('');
+      setDecisionStatus('');
+      setSelectedKyc(application);
+    }
+    const params = new URLSearchParams(searchParams);
+    params.delete('application');
+    setSearchParams(params, { replace: true });
+  }, [loadError, loading, requests, searchParams, setSearchParams]);
 
   useLayoutEffect(() => {
     if (selectedKyc) {
@@ -218,7 +237,7 @@ const SuperAdminKyc = () => {
       });
       if (!res.data.success) throw new Error('KYC decision was not saved');
       if (res.data.business) {
-        setRequests(current => current.map(request => request._id === selectedKyc._id ? res.data.business : request));
+        setRequests(current => current.map(request => request._id === selectedKyc._id ? { ...request, ...res.data.business } : request));
       } else {
         await fetchRequests();
       }
@@ -237,7 +256,7 @@ const SuperAdminKyc = () => {
   const hasSearchFilters = Boolean(query || (activeFilter === 'history' && historyStatus));
   const displayedRequests = requests.filter(request =>
     filter.matches(request) &&
-    (!query || request.name?.toLowerCase().includes(query)) &&
+    (!query || [request.name, ...(request.ownerNames || [])].some(name => name?.toLowerCase().includes(query))) &&
     (activeFilter !== 'history' || !historyStatus || request.kycStatus === historyStatus)
   ).sort(compareRequests);
   const canDecide = selectedKyc && !isHistory(selectedKyc);
@@ -270,6 +289,10 @@ const SuperAdminKyc = () => {
           <div className="kyc-list-toolbar">
             <div className="kyc-search-fields">
               <label className="workspace-field">
+                <span>Search by business or owner name</span>
+                <input type="search" className="form-control" value={search} onChange={event => setSearch(event.target.value)} />
+              </label>
+              <label className="workspace-field">
                 <span>Application status</span>
                 <select id="kyc-status-filter" className="form-select" value={activeFilter} onChange={event => {
                   setActiveFilter(event.target.value);
@@ -277,14 +300,10 @@ const SuperAdminKyc = () => {
                 }}>
                   {filters.map(option => (
                     <option key={option.id} value={option.id}>
-                      {option.label} ({requests.filter(option.matches).length})
+                      {option.label}
                     </option>
                   ))}
                 </select>
-              </label>
-              <label className="workspace-field">
-                <span>Search by business name</span>
-                <input type="search" className="form-control" value={search} onChange={event => setSearch(event.target.value)} />
               </label>
               {activeFilter === 'history' && (
                 <label className="workspace-field">

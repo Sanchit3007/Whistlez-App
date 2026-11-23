@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Ringtone = require('../models/Ringtone');
 const Ad = require('../models/Ad');
 const { uploadToCloudinary, sendMediaUploadError } = require('../config/cloudinary');
+const { activeAdsOn, validateAdSchedule } = require('../utils/adSchedule');
 
 // @desc    Get All Registered Businesses & Admins
 // @route   GET /api/superadmin/businesses
@@ -102,7 +103,7 @@ const getGlobalMetrics = async (req, res) => {
   try {
     const totalBusinesses = await Business.countDocuments();
     const totalAdmins = await User.countDocuments({ role: 'admin' });
-    const totalAds = await Ad.countDocuments({ isActive: true });
+    const totalAds = await Ad.countDocuments(activeAdsOn(new Date().toISOString().slice(0, 10)));
 
     res.json({
       success: true,
@@ -276,7 +277,9 @@ const getAds = async (req, res) => {
 
 const createAd = async (req, res) => {
   try {
-    const { name, positions, file, url, targeting } = req.body;
+    const { name, positions, file, url, targeting, startDate = null, endDate = null } = req.body;
+    const scheduleError = validateAdSchedule(startDate, endDate);
+    if (scheduleError) return res.status(400).json({ success: false, message: scheduleError });
     const finalPositions = positions && positions.length ? positions : (req.body.position ? [req.body.position] : []);
 
     if (!name || !file || !url) {
@@ -387,6 +390,8 @@ const createAd = async (req, res) => {
       url,
       views,
       clicks,
+      startDate: startDate || null,
+      endDate: endDate || null,
       targeting: validatedTargeting
     });
 
@@ -411,6 +416,13 @@ const updateAd = async (req, res) => {
     if (!ad) {
       return res.status(404).json({ success: false, message: 'Ad campaign not found' });
     }
+
+    const startDate = req.body.startDate === undefined ? ad.startDate ?? null : req.body.startDate;
+    const endDate = req.body.endDate === undefined ? ad.endDate ?? null : req.body.endDate;
+    const scheduleError = validateAdSchedule(startDate, endDate);
+    if (scheduleError) return res.status(400).json({ success: false, message: scheduleError });
+    if (req.body.startDate !== undefined) ad.startDate = startDate || null;
+    if (req.body.endDate !== undefined) ad.endDate = endDate || null;
 
     if (name) ad.name = name;
     if (positions) {
@@ -614,8 +626,24 @@ const updateBusiness = async (req, res) => {
 // @access  Private (Super Admin only)
 const getKycRequests = async (req, res) => {
   try {
-    const kycRequests = await Business.find().sort({ updatedAt: -1 });
-    
+    const businesses = await Business.find().sort({ updatedAt: -1 }).lean();
+    const admins = await User.find({
+      businessId: { $in: businesses.map(business => business._id) },
+      role: 'admin'
+    }).select('businessId name -_id').lean();
+
+    const ownerNamesByBusiness = new Map();
+    for (const admin of admins) {
+      const businessId = String(admin.businessId);
+      if (!ownerNamesByBusiness.has(businessId)) ownerNamesByBusiness.set(businessId, []);
+      ownerNamesByBusiness.get(businessId).push(admin.name);
+    }
+
+    const kycRequests = businesses.map(business => ({
+      ...business,
+      ownerNames: ownerNamesByBusiness.get(String(business._id)) || []
+    }));
+
     res.json({ success: true, kycRequests });
   } catch (error) {
     console.error('Superadmin get KYC requests error:', error);

@@ -4,6 +4,10 @@ import StatCard from '../../components/StatCard';
 import { Skeleton } from '../../components/Skeleton';
 import { AreaTrend, StatusDonut, Legend } from '../../components/Charts';
 import { downloadCsv } from '../../utils/downloadCsv';
+import ReportFilterToolbar from '../../components/ReportFilterToolbar';
+import { useReportFilters } from '../../utils/reportFilterSession';
+
+const defaultFilters = { filterStatus: 'all', searchQuery: '', startDate: '', endDate: '' };
 
 const ticketStatusTones = {
   completed: 'success',
@@ -22,10 +26,8 @@ const AdminReports = () => {
   const [tokens, setTokens] = useState([]);
   const [business, setBusiness] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const { filters, setFilters, hasFilters, clearFilters } = useReportFilters('queue', defaultFilters);
+  const { filterStatus, searchQuery, startDate, endDate } = filters;
   const [loadedRange, setLoadedRange] = useState(null);
   const [reportError, setReportError] = useState('');
   const range = `${startDate}:${endDate}`;
@@ -198,24 +200,16 @@ const AdminReports = () => {
         <p id="report-export-count" className="text-muted small" role="status">
           {invalidRange ? 'Choose an end date on or after the start date.' : reportError || (exportReady ? `${filteredTokens.length} ${filteredTokens.length === 1 ? 'row' : 'rows'} match the current filters` : 'Loading report rows…')}
         </p>
-        <div className="workspace-filters report-filters mb-3">
-          <label className="workspace-field report-search">
-            <span>Search tickets</span>
-            <input
-              type="search"
-              className="form-control"
-              placeholder="Name, token, or phone"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </label>
+        <ReportFilterToolbar searchLabel="Search tickets" searchPlaceholder="Name, token, or phone"
+          search={searchQuery} onSearch={value => setFilters({ ...filters, searchQuery: value })}
+          hasFilters={hasFilters} onClear={clearFilters}>
           <label className="workspace-field">
             <span>From</span>
             <input
               type="date"
               className="form-control"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
             />
           </label>
           <label className="workspace-field">
@@ -224,15 +218,15 @@ const AdminReports = () => {
               type="date"
               className="form-control"
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
             />
           </label>
-          <label className="workspace-field report-status">
+          <label className="workspace-field">
             <span>Status</span>
             <select 
               className="form-select"
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              onChange={(e) => setFilters({ ...filters, filterStatus: e.target.value })}
             >
               <option value="all">All Statuses</option>
               <option value="waiting">Waiting</option>
@@ -243,7 +237,7 @@ const AdminReports = () => {
               <option value="postponed">Postponed</option>
             </select>
           </label>
-        </div>
+        </ReportFilterToolbar>
 
         <div className="workspace-compact-list">
           {loading ? (

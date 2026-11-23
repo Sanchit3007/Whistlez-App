@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Ad = require('../models/Ad');
+const { activeAdsOn } = require('../utils/adSchedule');
 
 const AD_PLACEMENTS = [
   { id: 'HOME_1', label: 'Home Page 1' },
@@ -21,8 +22,7 @@ router.get('/', async (req, res) => {
     const targetStateCode = (stateCode || state || '').toUpperCase().trim();
     const targetCityName = (cityName || city || '').toLowerCase().trim();
 
-    // Fetch all active ads
-    const ads = await Ad.find({ isActive: true });
+    const ads = await Ad.find(activeAdsOn(new Date().toISOString().slice(0, 10)));
 
     // Filter matching ads in memory
     const matchedAds = ads.map(ad => {

@@ -22,6 +22,10 @@ const getProfileForm = (business = {}) => ({
   serviceTime: business.queueConfig?.serviceTime || 15
 });
 
+const escapePrintText = value => String(value).replace(/[&<>"]/g, char => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'
+}[char]));
+
 const ProfileSummary = ({ rows }) => (
   <dl className="settings-profile-summary">
     {rows.map(([label, value]) => (
@@ -37,8 +41,8 @@ const AdminSettings = () => {
   const [business, setBusiness] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [qrLoading, setQrLoading] = useState(false);
+  const [qrFeedback, setQrFeedback] = useState(null);
   const [viewQr, setViewQr] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
@@ -46,14 +50,23 @@ const AdminSettings = () => {
   const profileEditButton = useRef(null);
   const profileForm = useRef(null);
 
-  const [copiedCode, setCopiedCode] = useState(false);
+  const [copyStatus, setCopyStatus] = useState('');
   const fileInputRef = useRef(null);
+  const copyTimeout = useRef(null);
+  const hasQr = Boolean(business?.qrCode);
 
-  const handleCopyCode = () => {
+  useEffect(() => () => clearTimeout(copyTimeout.current), []);
+
+  const handleCopyCode = async () => {
     if (!business?.uniqueQrCode) return;
-    navigator.clipboard.writeText(business.uniqueQrCode);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
+    clearTimeout(copyTimeout.current);
+    try {
+      await navigator.clipboard.writeText(business.uniqueQrCode);
+      setCopyStatus('copied');
+      copyTimeout.current = setTimeout(() => setCopyStatus(''), 2000);
+    } catch {
+      setCopyStatus('failed');
+    }
   };
 
   const [editForm, setEditForm] = useState(() => getProfileForm());
@@ -93,7 +106,6 @@ const AdminSettings = () => {
     setSavingSettings(true);
     setSettingsFeedback(null);
     setError('');
-    setSuccess('');
 
     try {
       const res = await api.put('/admin/business', {
@@ -131,69 +143,55 @@ const AdminSettings = () => {
     return false;
   };
 
-  // Generate QR Code
-  const handleGenerateQR = async () => {
+  const updateQr = async (request, message, fallback) => {
+    if (qrLoading) return;
+    setQrLoading(true);
+    setQrFeedback(null);
+    setCopyStatus('');
     try {
-      setQrLoading(true);
-      setError('');
-      setSuccess('');
-      const res = await api.post('/admin/business/qr/generate');
-      if (res.data.success) {
-        setBusiness(res.data.business);
-        setSuccess('QR Code successfully generated and saved to your business profile!');
+      const { data } = await request();
+      if (!data.success || !data.business) {
+        setQrFeedback({ error: true, text: data.message || fallback });
+        return;
       }
+      setBusiness(data.business);
+      setQrFeedback({ text: message });
     } catch (err) {
-      console.error('Error generating QR', err);
-      setError(err.response?.data?.message || 'Failed to generate QR Code.');
+      setQrFeedback({ error: true, text: err.response?.data?.message || fallback });
     } finally {
       setQrLoading(false);
     }
   };
 
-  // Upload Custom QR Image
-  const handleCustomQRUpload = (e) => {
-    const file = e.target.files[0];
+  const handleGenerateQR = () => updateQr(
+    () => api.post('/admin/business/qr/generate'),
+    hasQr ? 'New QR code saved.' : 'QR code generated and saved.',
+    'Could not generate the QR code.'
+  );
+
+  const handleCustomQRUpload = (event) => {
+    const file = event.currentTarget.files[0];
+    event.currentTarget.value = '';
     if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setQrFeedback({ error: true, text: 'Choose an image file for the QR code.' });
+      return;
+    }
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      try {
-        setQrLoading(true);
-        setError('');
-        setSuccess('');
-        const res = await api.put('/admin/business/qr', { qrCode: reader.result });
-        if (res.data.success) {
-          setBusiness(res.data.business);
-          setSuccess('Custom QR Code uploaded and saved successfully!');
-        }
-      } catch (err) {
-        console.error('Error uploading custom QR', err);
-        setError(err.response?.data?.message || 'Failed to upload custom QR Code.');
-      } finally {
-        setQrLoading(false);
-      }
-    };
-    reader.readAsDataURL(file);
+    updateQr(async () => {
+      const qrCode = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Could not read the image. Try the upload again.'));
+        reader.readAsDataURL(file);
+      });
+      return api.put('/admin/business/qr', { qrCode });
+    }, 'Custom QR code uploaded and saved.', 'Could not upload the QR code.');
   };
 
-  // Remove QR Code
-  const handleRemoveQR = async () => {
+  const handleRemoveQR = () => {
     if (!window.confirm('Are you sure you want to remove the QR Code from your business?')) return;
-    try {
-      setQrLoading(true);
-      setError('');
-      setSuccess('');
-      const res = await api.delete('/admin/business/qr');
-      if (res.data.success) {
-        setBusiness(res.data.business);
-        setSuccess('QR Code removed successfully from your business profile.');
-      }
-    } catch (err) {
-      console.error('Error removing QR', err);
-      setError(err.response?.data?.message || 'Failed to remove QR Code.');
-    } finally {
-      setQrLoading(false);
-    }
+    updateQr(() => api.delete('/admin/business/qr'), 'QR code removed.', 'Could not remove the QR code.');
   };
 
   // Download QR as PNG image
@@ -211,31 +209,40 @@ const AdminSettings = () => {
   const handlePrintQRStandee = () => {
     if (!business?.qrCode) return;
     const printWindow = window.open('', '_blank', 'width=700,height=900');
+    if (!printWindow) {
+      setQrFeedback({ error: true, text: 'Allow pop-ups for this site to open the print standee.' });
+      return;
+    }
+    const name = escapePrintText(business.name || 'Business');
+    const category = escapePrintText(business.category || 'Service Queue');
+    const qrImage = escapePrintText(business.qrCode);
+    const qrId = business.uniqueQrCode ? escapePrintText(business.uniqueQrCode) : '';
+    const color = /^#[\da-f]{6}$/i.test(business.primaryColor || '') ? business.primaryColor : '#0d6efd';
     printWindow.document.write(`
       <html>
         <head>
-          <title>Print QR Standee - ${business.name || 'Business'}</title>
+          <title>Print QR Standee - ${name}</title>
           <style>
             body { font-family: 'Segoe UI', Roboto, sans-serif; text-align: center; padding: 40px; background: #fff; }
-            .card { max-width: 480px; margin: 0 auto; border: 3px solid ${business.primaryColor || '#0d6efd'}; border-radius: 24px; padding: 36px 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+            .card { max-width: 480px; margin: 0 auto; border: 3px solid ${color}; border-radius: 24px; padding: 36px 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
             .logo-text { font-size: 26px; font-weight: 800; color: #111; margin-bottom: 4px; }
             .category { font-size: 14px; text-transform: uppercase; color: #666; font-weight: 600; letter-spacing: 1px; margin-bottom: 16px; }
-            .qr-frame { background: #f8f9fa; padding: 16px; border-radius: 16px; display: inline-block; margin-bottom: 16px; border: 1px solid #e9ecef; }
+            .qr-frame { background: #fff; padding: 16px; border-radius: 16px; display: inline-block; margin-bottom: 16px; border: 1px solid #e9ecef; }
             .qr-img { width: 260px; height: 260px; display: block; }
             .code-badge { font-family: monospace; font-size: 14px; font-weight: 700; color: #333; background: #e9ecef; padding: 6px 14px; border-radius: 8px; display: inline-block; margin-bottom: 16px; }
             .instruction-heading { font-size: 18px; font-weight: 700; color: #222; margin-bottom: 4px; }
             .instruction-sub { font-size: 13px; color: #666; margin-bottom: 20px; }
-            .badge { background: ${business.primaryColor || '#0d6efd'}; color: #fff; padding: 8px 18px; border-radius: 50px; font-weight: 700; font-size: 13px; display: inline-block; }
+            .badge { background: ${color}; color: #fff; padding: 8px 18px; border-radius: 50px; font-weight: 700; font-size: 13px; display: inline-block; }
           </style>
         </head>
         <body>
           <div class="card">
-            <div class="logo-text">${business.name || 'WhistleApp Store'}</div>
-            <div class="category">${business.category || 'Service Queue'}</div>
+            <div class="logo-text">${name}</div>
+            <div class="category">${category}</div>
             <div class="qr-frame">
-              <img class="qr-img" src="${business.qrCode}" alt="QR Code" />
+              <img class="qr-img" src="${qrImage}" alt="QR Code" />
             </div>
-            ${business.uniqueQrCode ? `<div class="code-badge">ID: ${business.uniqueQrCode}</div>` : ''}
+            ${qrId ? `<div class="code-badge">ID: ${qrId}</div>` : ''}
             <div class="instruction-heading">Scan to Request Token on Mobile</div>
             <div class="instruction-sub">Point your mobile camera or open WhistleApp to view live wait-times and check-in instantly.</div>
             <div><span class="badge">WhistleApp Digital Check-in</span></div>
@@ -262,13 +269,6 @@ const AdminSettings = () => {
         <p className="text-muted">Customize your business details, generate QR codes, and configure queue preferences.</p>
       </div>
 
-      {success && (
-        <div className="alert alert-success border-0 rounded-3 small mb-4 d-flex align-items-center py-2 shadow-sm" role="alert">
-          <i className="bi bi-check-circle-fill me-2 fs-5"></i>
-          <div>{success}</div>
-        </div>
-      )}
-
       {error && (
         <div className="alert alert-danger border-0 rounded-3 small mb-4 d-flex align-items-center py-2 shadow-sm" role="alert">
           <i className="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
@@ -276,164 +276,97 @@ const AdminSettings = () => {
         </div>
       )}
 
-      {/* QR CODE MANAGEMENT SECTION */}
-      <div className="card border-0 p-4 p-md-5 bg-white shadow-sm rounded-4 mb-4">
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-4 border-bottom pb-3">
+      <section className="card settings-qr-section mb-4" aria-labelledby="settings-business-qr">
+        <header className="settings-qr-heading">
           <div>
-            <h5 className="fw-bold mb-1 text-dark">
-              <i className="bi bi-qr-code-scan text-primary me-2"></i> Business Mobile QR Code
-            </h5>
-            <p className="text-muted small mb-0">Customers scan this QR code on their mobile devices to request queue tokens.</p>
+            <h2 id="settings-business-qr">Business Mobile QR Code</h2>
+            <p className="small text-muted mb-0">Manage the QR code linked to your business queue.</p>
           </div>
-          <span className={`badge rounded-pill px-3 py-1.5 ${business?.qrCode ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary'}`}>
-            <i className={`bi bi-${business?.qrCode ? 'check-circle-fill' : 'dash-circle'} me-1`}></i>
-            {business?.qrCode ? 'Active & Saved in Collection' : 'No QR Configured'}
+          <span className={`badge rounded-pill ${hasQr ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'}`}>
+            <i className={`bi bi-${hasQr ? 'check-circle-fill' : 'dash-circle'} me-1`} aria-hidden="true" />
+            {hasQr ? 'QR saved' : 'No QR code yet'}
           </span>
-        </div>
-
-        <div className="row g-4 align-items-center">
-          {/* QR Code Canvas Preview */}
-          <div className="col-md-5 col-lg-4 text-center">
-            <div 
-              className="p-3 bg-light rounded-4 border d-inline-flex flex-column align-items-center justify-content-center position-relative shadow-sm"
-              style={{ width: '230px', maxWidth: '100%', minHeight: '230px' }}
-            >
-              {qrLoading ? (
-                <div className="d-flex flex-column align-items-center justify-content-center py-4">
-                  <div className="spinner-border text-primary mb-2" role="status"></div>
-                  <span className="small text-muted fw-semibold">Processing QR...</span>
+        </header>
+        <div className="settings-qr-layout">
+          <div className="settings-qr-preview">
+            {hasQr ? (
+              <>
+                <div className="settings-qr-backing">
+                  <img src={business.qrCode} alt={`Queue QR code for ${business.name || 'this business'}`} />
                 </div>
-              ) : business?.qrCode ? (
-                <>
-                  <img 
-                    src={business.qrCode} 
-                    alt="Business QR Code" 
-                    className="img-fluid rounded-3 mb-2" 
-                    style={{ maxWidth: '170px', maxHeight: '170px', objectFit: 'contain' }}
-                  />
-                  <span className="small fw-bold text-dark font-monospace text-truncate mb-1" style={{ maxWidth: '200px' }}>
-                    {business.name}
-                  </span>
-
-                  {business.uniqueQrCode && (
-                    <div className="d-flex align-items-center justify-content-between bg-white border rounded-pill px-2.5 py-1 w-100 shadow-sm mt-1">
-                      <div className="d-flex align-items-center text-truncate me-1">
-                        <i className="bi bi-shield-lock-fill text-primary me-1" style={{ fontSize: '0.7rem' }}></i>
-                        <span className="font-monospace fw-bold text-dark text-truncate" style={{ fontSize: '0.72rem' }}>
-                          {business.uniqueQrCode}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        className="btn btn-link p-0 text-muted"
-                        onClick={handleCopyCode}
-                        title="Copy Unique Code"
-                      >
-                        <i className={`bi bi-${copiedCode ? 'check-lg text-success' : 'clipboard'}`} style={{ fontSize: '0.8rem' }}></i>
-                      </button>
-                    </div>
-                  )}
-
-                  {business.qrGeneratedAt && (
-                    <span className="text-muted mt-1.5" style={{ fontSize: '0.62rem' }}>
-                      Created: {new Date(business.qrGeneratedAt).toLocaleDateString()}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <div className="text-center text-muted py-4 px-2">
-                  <i className="bi bi-qr-code fs-1 text-muted d-block mb-2"></i>
-                  <span className="small d-block fw-semibold">No QR Code Generated</span>
-                  <span className="text-muted" style={{ fontSize: '0.72rem' }}>Click generate below to create one</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* QR Action Buttons */}
-          <div className="col-md-7 col-lg-8">
-            <h6 className="fw-bold text-dark mb-2">QR Code Actions & Standee Setup</h6>
-            <p className="text-muted small mb-3">
-              Generate an official QR code linked to this business, or upload your own branded QR code. Changes are saved directly in the Business database collection.
-            </p>
-
-            <div className="d-flex flex-wrap gap-2 mb-3">
-              <button 
-                type="button" 
-                className="btn btn-primary btn-sm px-3 py-2 rounded-3 fw-bold d-flex align-items-center shadow-sm"
-                onClick={handleGenerateQR}
-                disabled={qrLoading}
-              >
-                <i className="bi bi-magic me-1.5"></i>
-                {business?.qrCode ? 'Regenerate QR Code' : 'Generate QR Code'}
-              </button>
-
-              <button 
-                type="button" 
-                className="btn btn-outline-secondary btn-sm px-3 py-2 rounded-3 fw-bold d-flex align-items-center"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={qrLoading}
-              >
-                <i className="bi bi-upload me-1.5"></i> Upload Custom QR
-              </button>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                className="d-none" 
-                accept="image/*" 
-                onChange={handleCustomQRUpload}
-              />
-
-              {business?.qrCode && (
-                <>
-                  <button
-                    type="button"
-                    className="btn btn-outline-primary btn-sm px-3 py-2 rounded-3 fw-bold d-flex align-items-center gap-2"
-                    onClick={() => setViewQr(true)}
-                    disabled={qrLoading}
-                    aria-haspopup="dialog"
-                  >
-                    <i className="bi bi-qr-code" aria-hidden="true" /> View QR
-                  </button>
-                  <button 
-                    type="button" 
-                    className="btn btn-outline-primary btn-sm px-3 py-2 rounded-3 fw-bold d-flex align-items-center"
-                    onClick={handleDownloadQR}
-                  >
-                    <i className="bi bi-download me-1.5"></i> Download PNG
-                  </button>
-
-                  <button 
-                    type="button" 
-                    className="btn btn-outline-primary btn-sm px-3 py-2 rounded-3 fw-bold d-flex align-items-center gap-2"
-                    onClick={handlePrintQRStandee}
-                  >
-                    <i className="bi bi-printer" aria-hidden="true" /> Print Standee
-                  </button>
-
-                  <button 
-                    type="button" 
-                    className="btn btn-outline-danger btn-sm px-3 py-2 rounded-3 fw-bold d-flex align-items-center"
-                    onClick={handleRemoveQR}
-                    disabled={qrLoading}
-                  >
-                    <i className="bi bi-trash3 me-1.5"></i> Remove QR
-                  </button>
-                </>
-              )}
-            </div>
-
-            <div className="p-3 bg-light rounded-3 small text-muted">
-              <div className="d-flex align-items-start gap-2">
-                <i className="bi bi-info-circle-fill text-primary mt-0.5"></i>
-                <div>
-                  <strong>Mobile Integration:</strong> When customers scan this QR code with their mobile device, it will automatically connect them to your business queue to request a token.
-                </div>
+                <p className="settings-qr-business">{business.name}</p>
+                {business.uniqueQrCode && (
+                  <div className="settings-qr-copy">
+                    <code aria-label="QR ID">{business.uniqueQrCode}</code>
+                    <button type="button" className="btn btn-outline-secondary btn-sm" onClick={handleCopyCode} aria-label="Copy QR ID">
+                      <i className={`bi bi-${copyStatus === 'copied' ? 'check-lg' : 'clipboard'}`} aria-hidden="true" />
+                      {copyStatus === 'copied' ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                )}
+                <span className="visually-hidden" role="status">{copyStatus === 'copied' ? 'QR ID copied.' : ''}</span>
+                {copyStatus === 'failed' && <p className="small text-warning mb-0" role="status">Select the QR ID to copy it manually.</p>}
+                {business.qrGeneratedAt && (
+                  <p className="small text-muted mb-0">Saved {new Date(business.qrGeneratedAt).toLocaleDateString()}</p>
+                )}
+              </>
+            ) : (
+              <div className="settings-qr-empty">
+                <i className="bi bi-qr-code" aria-hidden="true" />
+                <p className="fw-semibold mb-0">No QR to show</p>
               </div>
+            )}
+          </div>
+
+          <div className="settings-qr-actions">
+            {hasQr && (
+              <div className="settings-qr-use" role="group" aria-label="Use the saved QR code">
+                <button type="button" className="btn btn-primary settings-qr-view-button" onClick={() => setViewQr(true)} disabled={qrLoading} aria-haspopup="dialog">
+                  <i className="bi bi-qr-code" aria-hidden="true" /> View QR
+                </button>
+                <button type="button" className="btn btn-outline-primary" onClick={handleDownloadQR} disabled={qrLoading}>
+                  <i className="bi bi-download" aria-hidden="true" /> Download PNG
+                </button>
+                <button type="button" className="btn btn-outline-primary" onClick={handlePrintQRStandee} disabled={qrLoading}>
+                  <i className="bi bi-printer" aria-hidden="true" /> Print Standee
+                </button>
+              </div>
+            )}
+            <p id="settings-qr-manage-help" className="small text-muted mb-0">
+              Generate a QR code or upload your own branded image. Changes are saved to your business profile.
+            </p>
+            <div className="settings-qr-manage" role="group" aria-label="Replace or create a QR code" aria-describedby="settings-qr-manage-help">
+              <button type="button" className={`btn ${hasQr ? 'btn-outline-secondary' : 'btn-primary'}`} onClick={handleGenerateQR} disabled={qrLoading || !business}>
+                <i className="bi bi-magic" aria-hidden="true" /> {hasQr ? 'Regenerate QR Code' : 'Generate QR Code'}
+              </button>
+              <button type="button" className="btn btn-outline-secondary" onClick={() => fileInputRef.current?.click()} disabled={qrLoading || !business}>
+                <i className="bi bi-upload" aria-hidden="true" /> Upload Custom QR
+              </button>
+              <input type="file" ref={fileInputRef} className="d-none" accept="image/*" onChange={handleCustomQRUpload} aria-label="Choose a custom QR image" />
+            </div>
+            {hasQr && (
+              <div className="settings-qr-remove">
+                <button type="button" className="btn btn-outline-danger" onClick={handleRemoveQR} disabled={qrLoading}>
+                  <i className="bi bi-trash3" aria-hidden="true" /> Remove QR
+                </button>
+              </div>
+            )}
+            {qrLoading && <p className="small text-muted mb-0" role="status">Updating the QR code…</p>}
+            {qrFeedback && (
+              <p className={`small mb-0 ${qrFeedback.error ? 'text-danger' : 'text-success'}`} role={qrFeedback.error ? 'alert' : 'status'}>
+                {qrFeedback.text}
+              </p>
+            )}
+            <div className="settings-qr-mobile-tip">
+              <i className="bi bi-info-circle" aria-hidden="true" />
+              <p className="small mb-0">
+                <strong>Mobile check-in.</strong> Customers scan the QR with their phone to open your business queue and request a token.
+                Show it on-screen with <strong>View QR</strong> or place a printed standee at the counter.
+              </p>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {needsKycCorrection && (
         <section className="card p-3 p-md-4 mb-4" aria-labelledby="settings-kyc-heading">

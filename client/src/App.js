@@ -8,6 +8,7 @@ import SuperAdminSidebar from './components/SuperAdminSidebar';
 import BrandLogo, { SidebarIcon } from './components/BrandLogo';
 import IdentityAvatar from './components/IdentityAvatar';
 import Topbar from './components/Topbar';
+import WorkspaceNotifications from './components/WorkspaceNotifications';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './components/ToastProvider';
 
@@ -124,6 +125,7 @@ const AuthenticatedWorkspace = ({ user, children }) => {
           <BrandLogo imgHeight="28px" textClass="fs-5" />
         </div>
         <div className="d-flex align-items-center gap-2">
+          <WorkspaceNotifications user={user} />
           <IdentityAvatar name={user.name} identity={user._id || user.email} size={38} label={user.name || user.email || 'Signed-in profile'} />
         </div>
       </header>

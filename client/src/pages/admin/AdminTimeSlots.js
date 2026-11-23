@@ -13,7 +13,7 @@ const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 
 const formatDay = (date) => dayFormat.format(new Date(date));
 
 const getSlotStatus = (slot) => {
-  if (slot.isActive === false) return 'Paused';
+  if (slot.isActive === false) return 'Closed';
   return (slot.bookedCount || 0) >= slot.maxCapacity ? 'Full' : 'Available';
 };
 
@@ -25,6 +25,19 @@ const getTimeHint = (slot, existingSlots) => {
     other.startTime < slot.endTime && other.endTime > slot.startTime
   );
   return overlap ? `Overlaps the ${overlap.startTime}–${overlap.endTime} slot. Adjust either time to avoid overlap.` : '';
+};
+
+const SlotCapacity = ({ slot }) => {
+  const booked = slot.bookedCount || 0;
+  const capacity = slot.maxCapacity;
+  return (
+    <div className="slot-capacity">
+      <p className="small text-muted mb-1">{booked} of {capacity} booked</p>
+      <div className="slot-capacity-track" aria-hidden="true">
+        <span data-status={getSlotStatus(slot)} style={{ width: Math.min(100, booked / Math.max(1, capacity) * 100) + '%' }} />
+      </div>
+    </div>
+  );
 };
 
 const AdminTimeSlots = () => {
@@ -333,7 +346,7 @@ const AdminTimeSlots = () => {
                   {slots.map(slot => (
                     <tr key={slot._id}>
                       <th scope="row">{slot.startTime}–{slot.endTime}</th>
-                      <td>{slot.bookedCount || 0} / {slot.maxCapacity}</td>
+                      <td><SlotCapacity slot={slot} /></td>
                       <td>{renderSlotStatus(slot)}</td>
                       <td>{renderSlotActions(slot)}</td>
                     </tr>
@@ -348,10 +361,7 @@ const AdminTimeSlots = () => {
                     <h3>{slot.startTime}–{slot.endTime}</h3>
                     {renderSlotStatus(slot)}
                   </div>
-                  <p className="small text-muted mb-0">{slot.bookedCount || 0} of {slot.maxCapacity} booked</p>
-                  <div className="slot-capacity-track" aria-hidden="true">
-                    <span data-status={getSlotStatus(slot)} style={{ width: Math.min(100, (slot.bookedCount || 0) / Math.max(1, slot.maxCapacity) * 100) + '%' }} />
-                  </div>
+                  <SlotCapacity slot={slot} />
                   {renderSlotActions(slot)}
                 </li>
               ))}

@@ -1,128 +1,198 @@
 .trend-workspace {
-  width: min(100%, 32rem);
+  width: min(100%, 56rem);
   margin-inline: auto;
 }
 
-.trend-workspace-grid {
+.trend-workspace-grid,
+.trend-preview {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
-  align-items: start;
 }
 
-.trend-feed-status, .trend-phone-screen {
+.trend-feed-status,
+.trend-phone-screen {
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   background: var(--surface);
   color: var(--ink);
 }
 
-.trend-feed-status { padding: clamp(.9rem, 2.5vw, 1.4rem); }
-.trend-status-heading, .trend-feed-header, .trend-mode-controls {
+.trend-feed-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .65rem 1.35rem;
+  padding: clamp(.8rem, 2vw, 1.15rem);
+}
+
+.trend-status-heading {
+  flex: 1 1 13rem;
+  min-width: 0;
+}
+
+.trend-status-heading h2 {
+  margin: 0 0 .35rem;
+  font-size: 1rem;
+}
+
+.trend-status-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem 1.35rem;
+  margin: 0;
+  font-size: .85rem;
+}
+
+.trend-status-metrics dt { color: var(--ink-2); font-weight: 500; }
+.trend-status-metrics dd { margin: .25rem 0 0; font-weight: 700; }
+
+.trend-mode-controls,
+.trend-empty-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: .5rem;
 }
-.trend-status-heading, .trend-feed-header { justify-content: space-between; }
-.trend-status-heading h2, .trend-feed-header h2 { margin: 0; font-size: 1.08rem; }
-.trend-preview-mode { font-size: .78rem; color: var(--ink-2); font-weight: 700; }
-.trend-preview-mode { display: inline-flex; align-items: center; gap: .4rem; color: var(--accent); }
-.trend-preview-mode i { font-size: 1rem; line-height: 1; }
-.trend-exit-test { min-height: 44px; }
 
-.trend-feed-status dl {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .5rem;
-  margin: .9rem 0;
-  padding: .8rem 0;
-  border-block: 1px solid var(--line);
-  font-size: .875rem;
+.trend-mode-controls .btn,
+.trend-feed-message .btn {
+  min-height: 44px;
+  align-content: center;
 }
-.trend-feed-status dt { color: var(--ink-2); font-weight: 500; }
-.trend-feed-status dd { margin: .25rem 0 0; font-weight: 700; overflow-wrap: anywhere; }
-.trend-mode-controls .btn, .trend-feed-message .btn { min-height: 44px; align-content: center; }
-.trend-preview-help { margin-top: .6rem; color: var(--ink-2); font-size: .875rem; }
-.trend-preview-help summary { padding-block: .5rem; color: var(--ink); cursor: pointer; }
-.trend-preview-help p { margin-bottom: 0; }
+
+.trend-preview-help {
+  flex-basis: 100%;
+  border-top: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: .85rem;
+}
+
+.trend-preview-help summary {
+  width: fit-content;
+  padding-block: .5rem .15rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+.trend-preview-help p { margin: .5rem 0 0; }
+
+.trend-preview-size { display: none; }
 
 .trend-phone { min-width: 0; }
-.trend-phone-screen {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: min(38rem, 75svh);
-  overflow: hidden;
+
+.trend-screen-heading {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--surface);
 }
-.trend-feed-header { padding: .9rem 1rem; }
-.trend-categories {
+
+.trend-feed-header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0 .2rem;
-  border-bottom: 1px solid var(--line);
-  padding: 0 .55rem .25rem;
+  justify-content: space-between;
+  gap: .4rem .75rem;
+  padding: .95rem .9rem .35rem;
 }
-.trend-categories button {
-  flex: 0 0 auto;
-  min-height: 44px;
-  padding: .5rem .55rem;
-  border: 0;
-  box-shadow: inset 0 -2px transparent;
-  background: var(--surface);
-  color: var(--ink-2);
-  font-size: .875rem;
-  font-weight: 600;
-}
-.trend-categories button[aria-pressed="true"] {
-  box-shadow: inset 0 -2px var(--accent);
+.trend-feed-header h2 { margin: 0; font-size: 1.15rem; }
+.trend-preview-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
   color: var(--accent);
+  font-size: .75rem;
   font-weight: 700;
 }
-.trend-categories .trend-category-more {
-  appearance: auto;
-  width: auto;
-  min-width: 5rem;
-  max-width: 100%;
-  min-height: 44px;
-  margin-inline-start: auto;
-  padding-inline-end: .65rem;
-  background-image: none;
-  font-size: .875rem;
+.trend-preview-mode.is-test {
+  padding: .2rem .45rem;
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
 }
-.trend-category-more:has(option:checked:not([value=""])) {
+
+.trend-categories {
+  display: flex;
+  gap: .35rem;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  padding: .3rem .9rem .45rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
+}
+
+.trend-categories button {
+  flex: none;
+  min-height: 44px;
+  padding: .25rem .8rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--canvas);
+  color: var(--ink-2);
+  font-size: .82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.trend-categories button[aria-pressed="true"] {
   border-color: var(--accent);
+  background: var(--accent-soft);
   color: var(--accent);
 }
-.trend-categories button:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
-.trend-feed-body { flex: 1; padding: .85rem; background: var(--canvas); }
-.trend-feed-body:has(> .trend-feed-message:only-child) { display: grid; align-items: center; min-height: 12rem; }
-.trend-feed-message { margin: 0; padding: 1rem; border-radius: var(--r-md); color: var(--ink-2); text-align: center; }
-.trend-feed-message h3 { color: var(--ink); font-size: 1rem; }
+.trend-categories button:hover { color: var(--ink); }
+.trend-categories button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.trend-feed-body {
+  flex: 1;
+  min-height: 0;
+  padding: .75rem;
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+  background: var(--canvas);
+}
+.trend-feed-message {
+  margin: 0;
+  padding: .9rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink-2);
+}
+.trend-feed-message h3 { margin: 0 0 .4rem; color: var(--ink); font-size: 1rem; }
 .trend-feed-message p { margin-bottom: .75rem; }
 .trend-feed-message + .trend-topic-list { margin-top: .75rem; }
-.trend-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; }
 
 .trend-topic-list { display: grid; gap: .55rem; margin: 0; padding: 0; list-style: none; }
 .trend-topic {
   display: grid;
-  grid-template-columns: 3rem minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: .65rem;
   align-items: start;
-  padding: .65rem;
+  padding: .7rem;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--surface);
 }
-.trend-topic-featured { display: block; }
-.trend-topic-featured .trend-topic-image { aspect-ratio: 16 / 7; margin-bottom: .75rem; }
-.trend-topic-image { aspect-ratio: 1; overflow: hidden; border-radius: var(--r-sm); background: var(--accent-soft); }
+.trend-topic:not(.trend-topic-featured):has(.trend-topic-image) {
+  grid-template-columns: clamp(2.75rem, 14%, 3.75rem) minmax(0, 1fr);
+}
+.trend-topic-featured {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+}
+.trend-topic-image {
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  background: var(--field-bg);
+}
+.trend-topic-featured .trend-topic-image { aspect-ratio: 16 / 8; }
 .trend-topic-image img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.trend-image-placeholder { display: grid; height: 100%; place-items: center; color: var(--ink-2); }
 .trend-topic-detail .trend-topic-image { aspect-ratio: 16 / 8; }
 .trend-topic-detail { overflow-wrap: anywhere; }
-.trend-topic-meta, .trend-likes {
+
+.trend-topic-meta,
+.trend-likes {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -130,15 +200,33 @@
   color: var(--ink-2);
   font-size: .8rem;
 }
-.trend-topic-meta { margin-bottom: .2rem; font-weight: 700; }
-.trend-topic-meta span:first-child { color: var(--accent); }
+.trend-topic-meta { font-weight: 600; }
+.trend-topic-meta span:first-child { color: var(--accent); font-weight: 750; }
 .trend-rank-up { color: var(--ok); }
 .trend-rank-down { color: var(--bad); }
-.trend-topic h3 { margin: 0; font-size: .98rem; }
-.trend-topic-title { padding: .2rem 0; min-height: 44px; border: 0; background: none; color: var(--ink); text-align: start; font: inherit; }
+.trend-topic h3 { margin: 0; font-size: .95rem; }
+.trend-topic-featured h3 { font-size: 1.08rem; }
+.trend-topic-title {
+  padding: .15rem 0;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  text-align: start;
+  font: inherit;
+  font-weight: 700;
+}
 .trend-topic-title:hover { text-decoration: underline; text-decoration-color: var(--accent); }
 .trend-topic-content { min-width: 0; overflow-wrap: anywhere; }
-.trend-topic-content p { margin: .1rem 0 .45rem; color: var(--ink-2); font-size: .875rem; }
+.trend-topic-content p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0 0 .55rem;
+  color: var(--ink-2);
+  font-size: .85rem;
+}
 .trend-likes { justify-content: space-between; }
 .trend-like-button {
   display: inline-grid;
@@ -153,21 +241,40 @@
 }
 .trend-like-button:hover { background: var(--bad-soft); }
 
+@media (max-width: 767.98px) {
+  .admin-content-layout:has(.trend-workspace) { overflow-x: clip; }
+  .trend-screen-heading { position: sticky; inset-block-start: 4.25rem; z-index: 2; }
+  .trend-feed-status { gap: .7rem; }
+  .trend-status-heading,
+  .trend-status-metrics,
+  .trend-mode-controls { flex-basis: 100%; }
+}
+
 @media (min-width: 768px) {
+  .trend-preview-size {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: .35rem;
+  }
   .trend-phone {
     width: min(100%, 25.5rem);
     justify-self: center;
-    padding: .65rem;
+    padding: .6rem;
     border: 1px solid var(--line);
     border-radius: 2rem;
-    background: var(--hero-deep);
+    background: var(--field-bg);
     box-shadow: var(--shadow-md);
   }
+  .trend-phone[data-preview-size="fit"] {
+    width: min(100%, 25.5rem, max(14rem, calc((100svh - 6rem) * .4615 + 1.2rem)));
+  }
   .trend-phone-screen {
+    display: flex;
+    flex-direction: column;
     aspect-ratio: 9 / 19.5;
-    min-height: 0;
+    overflow: hidden;
     border-radius: 1.4rem;
   }
-  .trend-feed-header, .trend-categories { flex-shrink: 0; }
-  .trend-feed-body { min-height: 0; overflow-y: auto; }
+  .trend-feed-body { overflow-y: auto; overscroll-behavior-y: contain; }
 }

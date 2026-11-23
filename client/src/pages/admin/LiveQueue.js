@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import socket from '../../socket';
 import { api } from '../../context/AuthContext';
 import { useToast } from '../../components/ToastProvider';
@@ -18,6 +19,50 @@ const getLocalDate = (date) => [
 ].join('-');
 
 const CARDS_PER_PAGE = 3;
+
+const ShiftSummary = ({ date, tokens, formatTokenNumber, stale, onClose }) => {
+  const served = tokens.filter(token => token.status === 'completed');
+  const outstanding = tokens.filter(token => token.status === 'serving' || token.status === 'waiting');
+  const waits = served
+    .filter(token => token.calledAt && token.createdAt)
+    .map(token => Date.parse(token.calledAt) - Date.parse(token.createdAt))
+    .filter(wait => Number.isFinite(wait) && wait >= 0);
+  const average = waits.length ? Math.round(waits.reduce((total, wait) => total + wait, 0) / waits.length / 60000) : null;
+
+  return (
+    <FormDialog labelledBy="queue-shift-title" onClose={onClose}>
+      <div className="modal-content">
+        <header className="modal-header gap-2">
+          <div>
+            <h2 id="queue-shift-title" className="h5 mb-1">End-of-shift summary</h2>
+            <time dateTime={date} className="small text-muted">{new Date(`${date}T00:00:00Z`).toLocaleDateString(undefined, { dateStyle: 'long', timeZone: 'UTC' })}</time>
+          </div>
+          <button type="button" className="btn-close" aria-label="Close shift summary" onClick={onClose} />
+        </header>
+        <div className="modal-body">
+          {stale && <p className="text-warning">Showing the last successful queue update.</p>}
+          <dl className="d-flex flex-wrap justify-content-between gap-3 mb-3">
+            <div><dt className="small text-muted">Served</dt><dd className="h5 mb-0">{served.length}</dd></div>
+            <div><dt className="small text-muted">Still waiting</dt><dd className="h5 mb-0">{tokens.filter(token => token.status === 'waiting').length}</dd></div>
+            <div><dt className="small text-muted">Average wait</dt><dd className="h5 mb-0">{average === null ? '—' : `${average} min`}</dd></div>
+          </dl>
+          <h3 className="h6">Customers to hand off</h3>
+          {outstanding.length ? (
+            <ul className="list-unstyled mb-0">
+              {outstanding.map(token => (
+                <li key={token._id} className="d-flex flex-wrap align-items-center gap-2 border-top py-2">
+                  <span className="token-pill">{formatTokenNumber(token.tokenNumber)}</span>
+                  <span className="text-break">{token.customerName}</span>
+                  <span className="small text-muted ms-auto">{token.status === 'serving' ? 'Serving' : 'Waiting'}</span>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="text-muted mb-0">No customers are waiting or being served.</p>}
+        </div>
+      </div>
+    </FormDialog>
+  );
+};
 
 const QueueTicketCard = ({ number, customerName, className, children }) => (
   <details className={`kanban-card queue-ticket-card ${className}`}>
@@ -62,6 +107,10 @@ const QueueCardPage = ({ tickets, stage, children }) => {
 };
 
 const LiveQueue = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const linkedToken = searchParams.get('ticket');
+  const linkedDate = searchParams.get('date');
+  const [showShiftSummary, setShowShiftSummary] = useState(false);
   const [tokens, setTokens] = useState([]);
   const [business, setBusiness] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -146,6 +195,26 @@ const LiveQueue = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [postponeDate, setPostponeDate] = useState(new Date(Date.now() + 86400000).toISOString().split('T')[0]);
   const [postponing, setPostponing] = useState(false);
+
+  useEffect(() => {
+    if (linkedToken && /^\d{4}-\d{2}-\d{2}$/.test(linkedDate || '') && linkedDate !== selectedDate) {
+      setSelectedDate(linkedDate);
+    }
+  }, [linkedToken, linkedDate, selectedDate]);
+
+  useEffect(() => {
+    if (!linkedToken || (linkedDate && linkedDate !== selectedDate) || queueSnapshot?.date !== selectedDate || loading) return;
+    const token = tokens.find(item => item._id === linkedToken);
+    if (token) {
+      const position = tokens.filter(item => item.status === 'waiting').findIndex(item => item._id === token._id) + 1;
+      detailsTrigger.current = null;
+      setSelectedToken({ token, position });
+    }
+    const params = new URLSearchParams(searchParams);
+    params.delete('ticket');
+    params.delete('date');
+    setSearchParams(params, { replace: true });
+  }, [linkedToken, linkedDate, selectedDate, queueSnapshot, loading, tokens, searchParams, setSearchParams]);
 
   const fetchLiveQueueData = useCallback(async () => {
     queueRequest.current?.abort();
@@ -447,9 +516,15 @@ const LiveQueue = () => {
           >
             <i className="bi bi-plus-lg me-1" aria-hidden="true"></i> Add walk-in token
           </button>
+          <button type="button" className="btn btn-outline-primary workspace-primary" disabled={!currentSnapshot} onClick={() => setShowShiftSummary(true)}>
+            Shift summary
+          </button>
           {business && business.businessStatus !== 'Active' && <span id="walk-in-unavailable" className="small text-muted">KYC approval is required to add walk-ins.</span>}
         </div>
       </div>
+
+      {showShiftSummary && <ShiftSummary date={selectedDate} tokens={selectedDayTokens} formatTokenNumber={formatTokenNumber}
+        stale={Boolean(error)} onClose={() => setShowShiftSummary(false)} />}
 
       {error && (
         <div className="alert alert-danger border-0 rounded-3 small mb-4 d-flex align-items-center py-2 shadow-sm" role="alert">

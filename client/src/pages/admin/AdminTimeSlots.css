@@ -54,7 +54,8 @@
 .slot-capacity-track { height: .4rem; margin-bottom: .15rem; overflow: hidden; border-radius: 1rem; background: var(--line); }
 .slot-capacity-track > span { display: block; height: 100%; border-radius: inherit; background: var(--ok); }
 .slot-capacity-track > span[data-status="Full"] { background: var(--warn); }
-.slot-capacity-track > span[data-status="Paused"] { background: var(--ink-3); }
+.slot-capacity-track > span[data-status="Closed"] { background: var(--ink-3); }
+.slot-desktop-table .slot-capacity { min-width: 8rem; max-width: 14rem; }
 
 @media (min-width: 768px) {
   .slot-quick-form { grid-template-columns: repeat(3, minmax(0, 1fr)) auto; }

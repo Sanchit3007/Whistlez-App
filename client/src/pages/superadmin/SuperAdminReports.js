@@ -1,32 +1,19 @@
 import React, { useState } from 'react';
 import { api } from '../../context/AuthContext';
+import ReportFilterToolbar from '../../components/ReportFilterToolbar';
+import { downloadCsv } from '../../utils/downloadCsv';
+import { useReportFilters } from '../../utils/reportFilterSession';
+
+const defaultFilters = { searchQuery: '', userRole: 'all', businessStatus: 'all', adStatus: 'all' };
 
 const SuperAdminReports = () => {
   const [downloadingUsers, setDownloadingUsers] = useState(false);
   const [downloadingBusinesses, setDownloadingBusinesses] = useState(false);
   const [downloadingAds, setDownloadingAds] = useState(false);
   const [error, setError] = useState('');
-
-  const downloadCSV = (headers, rows, filename) => {
-    // Compile data into CSV string format
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(val => {
-        const str = String(val === null || val === undefined ? '' : val).replace(/"/g, '""');
-        return `"${str}"`;
-      }).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${filename}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const { filters, setFilters, hasFilters, clearFilters } = useReportFilters('system', defaultFilters);
+  const query = filters.searchQuery.trim().toLowerCase();
+  const matchesSearch = (...fields) => !query || fields.some(field => field?.toLowerCase().includes(query));
 
   const handleDownloadUsers = async () => {
     try {
@@ -34,7 +21,9 @@ const SuperAdminReports = () => {
       setError('');
       const res = await api.get('/superadmin/users');
       if (res.data.success) {
-        const users = res.data.users;
+        const users = res.data.users.filter(user =>
+          (filters.userRole === 'all' || user.role === filters.userRole) && matchesSearch(user.name, user.email)
+        );
         const headers = ['Name', 'Email', 'Role', 'Registered At'];
         const rows = users.map(u => [
           u.name,
@@ -42,7 +31,7 @@ const SuperAdminReports = () => {
           u.role,
           u.createdAt ? new Date(u.createdAt).toLocaleString() : ''
         ]);
-        downloadCSV(headers, rows, `whistle_users_${new Date().toISOString().split('T')[0]}`);
+        downloadCsv(headers, rows, `whistle_users_${new Date().toISOString().split('T')[0]}`);
       }
     } catch (err) {
       console.error('Error downloading users report', err);
@@ -58,7 +47,10 @@ const SuperAdminReports = () => {
       setError('');
       const res = await api.get('/superadmin/businesses');
       if (res.data.success) {
-        const businesses = res.data.businesses;
+        const businesses = res.data.businesses.filter(business =>
+          (filters.businessStatus === 'all' || business.businessStatus === filters.businessStatus) &&
+          matchesSearch(business.name, business.admin?.name, business.admin?.email)
+        );
         const headers = ['Business Name', 'Domain', 'Admin Name', 'Admin Email', 'City', 'State', 'Address', 'Registered At'];
         const rows = businesses.map(b => [
           b.name,
@@ -70,7 +62,7 @@ const SuperAdminReports = () => {
           b.address,
           b.createdAt ? new Date(b.createdAt).toLocaleString() : ''
         ]);
-        downloadCSV(headers, rows, `whistle_businesses_${new Date().toISOString().split('T')[0]}`);
+        downloadCsv(headers, rows, `whistle_businesses_${new Date().toISOString().split('T')[0]}`);
       }
     } catch (err) {
       console.error('Error downloading business report', err);
@@ -86,7 +78,9 @@ const SuperAdminReports = () => {
       setError('');
       const res = await api.get('/superadmin/ads');
       if (res.data.success) {
-        const ads = res.data.ads;
+        const ads = res.data.ads.filter(ad =>
+          (filters.adStatus === 'all' || Boolean(ad.isActive) === (filters.adStatus === 'active')) && matchesSearch(ad.name, ad.url)
+        );
         const headers = ['Ad Campaign Name', 'Placements', 'Active Status', 'URL', 'Views', 'Clicks', 'CTR (%)', 'Targeting Type', 'Created At'];
         const rows = ads.map(ad => {
           const ctr = ad.views > 0 ? ((ad.clicks / ad.views) * 100).toFixed(2) : '0.00';
@@ -105,7 +99,7 @@ const SuperAdminReports = () => {
             ad.createdAt ? new Date(ad.createdAt).toLocaleString() : ''
           ];
         });
-        downloadCSV(headers, rows, `whistle_ads_${new Date().toISOString().split('T')[0]}`);
+        downloadCsv(headers, rows, `whistle_ads_${new Date().toISOString().split('T')[0]}`);
       }
     } catch (err) {
       console.error('Error downloading ads report', err);
@@ -120,7 +114,7 @@ const SuperAdminReports = () => {
       <div className="page-head">
         <div>
           <h1 className="fw-extrabold text-dark">Global System Reports</h1>
-          <p className="text-muted mb-0">Generate and extract spreadsheet files for database auditing.</p>
+          <p className="text-muted mb-0">Search and filter report rows before exporting.</p>
         </div>
       </div>
 
@@ -129,6 +123,31 @@ const SuperAdminReports = () => {
           {error}
         </div>
       )}
+
+      <section className="card p-3 p-md-4 mb-3" aria-label="Report filters">
+        <ReportFilterToolbar searchLabel="Search reports" searchPlaceholder="User, business, or campaign"
+          search={filters.searchQuery} onSearch={value => setFilters({ ...filters, searchQuery: value })}
+          hasFilters={hasFilters} onClear={clearFilters}>
+          <label className="workspace-field">
+            <span>User role</span>
+            <select className="form-select" value={filters.userRole} onChange={event => setFilters({ ...filters, userRole: event.target.value })}>
+              <option value="all">All roles</option><option value="admin">Admin</option><option value="superadmin">Super Admin</option>
+            </select>
+          </label>
+          <label className="workspace-field">
+            <span>Business status</span>
+            <select className="form-select" value={filters.businessStatus} onChange={event => setFilters({ ...filters, businessStatus: event.target.value })}>
+              <option value="all">All statuses</option><option>Active</option><option>Pending Verification</option><option>Suspended</option>
+            </select>
+          </label>
+          <label className="workspace-field">
+            <span>Ad activation</span>
+            <select className="form-select" value={filters.adStatus} onChange={event => setFilters({ ...filters, adStatus: event.target.value })}>
+              <option value="all">All campaigns</option><option value="active">Enabled</option><option value="inactive">Disabled</option>
+            </select>
+          </label>
+        </ReportFilterToolbar>
+      </section>
 
       <div className="report-grid">
         {/* Card 1: Users Reports */}

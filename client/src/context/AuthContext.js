@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import axios from 'axios';
+import { clearReportFilterSession } from '../utils/reportFilterSession';
 
 const AuthContext = createContext();
 
@@ -38,11 +39,13 @@ export const AuthProvider = ({ children }) => {
             setUser(res.data.user);
           } else {
             sessionStorage.removeItem('token');
+            clearReportFilterSession();
             setUser(null);
           }
         } catch (err) {
           console.error('Error fetching user profile', err);
           sessionStorage.removeItem('token');
+          clearReportFilterSession();
           setUser(null);
         }
       }
@@ -56,6 +59,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await api.post('/auth/login', { email, password });
       if (res.data.success) {
+        clearReportFilterSession();
         sessionStorage.setItem('token', res.data.token);
         // Immediately fetch user details to populate businessId
         const meRes = await api.get('/auth/me');
@@ -78,6 +82,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await api.post('/auth/register', signupData);
       if (res.data.success) {
+        clearReportFilterSession();
         sessionStorage.setItem('token', res.data.token);
         // Fetch full profile details
         const meRes = await api.get('/auth/me');
@@ -98,6 +103,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = useCallback(() => {
     sessionStorage.removeItem('token');
+    clearReportFilterSession();
     setUser(null);
   }, []);
 

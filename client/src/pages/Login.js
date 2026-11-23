@@ -77,6 +77,8 @@ const Login = () => {
       return;
     }
 
+    const activeField = document.activeElement;
+    if (e.currentTarget.contains(activeField) && activeField.matches('input')) activeField.blur();
     setLoading(true);
     const result = await login(email, password);
     setLoading(false);

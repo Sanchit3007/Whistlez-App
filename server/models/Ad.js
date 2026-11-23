@@ -36,6 +36,8 @@ const AdSchema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
+    startDate: { type: String, default: null },
+    endDate: { type: String, default: null },
     targeting: {
       type: {
         type: String,

@@ -116,12 +116,16 @@ input[type="tel"], input[type="number"], input[type="date"], input[type="time"] 
 @media (max-width: 575.98px) {
   /* 16px inputs stop iOS Safari from zooming the page when a field is focused */
   .form-control, .form-control-sm, .form-select, .form-select-sm, .form-control-custom,
-  .auth-field input, textarea { font-size: 16px; }
+  textarea { font-size: 16px; }
 
   .kanban-card-id { font-size: 1.15rem; }
   .table td, .table th { font-size: .85rem; }
   .btn { font-size: .92rem; }
   .auth-title { font-size: 1.65rem; }
+}
+
+@media (max-width: 991.98px), (hover: none) and (pointer: coarse) {
+  .auth-field input { font-size: 16px; }
 }
 
 /* ---------- 8. Tablet / small laptop ---------- */

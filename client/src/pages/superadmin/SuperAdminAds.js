@@ -1,19 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import FormDialog from '../../components/FormDialog';
 import UploadField from '../../components/UploadField';
 import socket from '../../socket';
 import { api } from '../../context/AuthContext';
 import { countryData } from '../../utils/locationData';
-
-// Configurable placements constant
-const AD_PLACEMENTS = [
-  { id: 'HOME_1', label: 'Home Page 1' },
-  { id: 'HOME_2', label: 'Home Page 2' },
-  { id: 'SIDEBAR', label: 'Sidebar Ads' },
-  { id: 'FOOTER', label: 'Footer Banners' }
-];
+import { AD_PLACEMENTS, businessMatchesAudience, campaignStatus, describeSchedule, findOverlappingAds } from '../../utils/adSchedule';
 
 const SuperAdminAds = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -42,6 +37,25 @@ const SuperAdminAds = () => {
   const [adPositions, setAdPositions] = useState([]); // Selected placements IDs/Labels
   const [targetingType, setTargetingType] = useState('GLOBAL');
   const [selectedLocations, setSelectedLocations] = useState([]);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [audienceData, setAudienceData] = useState(null);
+  const [audienceRetry, setAudienceRetry] = useState(0);
+
+  useEffect(() => {
+    if (!showModal) return undefined;
+    const request = new AbortController();
+    setAudienceData(null);
+    api.get('/superadmin/businesses', { signal: request.signal })
+      .then(({ data }) => {
+        if (!data.success || !Array.isArray(data.businesses)) throw new Error('Could not load the campaign audience.');
+        if (!request.signal.aborted) setAudienceData({ businesses: data.businesses });
+      })
+      .catch(() => {
+        if (!request.signal.aborted) setAudienceData({ error: true });
+      });
+    return () => request.abort();
+  }, [showModal, audienceRetry]);
 
   // Location selector intermediate states
   const [selectedCountryCode, setSelectedCountryCode] = useState('');
@@ -235,6 +249,8 @@ const SuperAdminAds = () => {
     setAdPositions(['Home Page 1']); // Default selection
     setTargetingType('GLOBAL');
     setSelectedLocations([]);
+    setStartDate('');
+    setEndDate('');
     setSelectedCountryCode('');
     setSelectedStateCode('');
     setSelectedCityName('');
@@ -243,7 +259,7 @@ const SuperAdminAds = () => {
     setShowModal(true);
   };
 
-  const handleOpenEditModal = (ad) => {
+  const handleOpenEditModal = useCallback((ad) => {
     setEditId(ad._id);
     setAdName(ad.name);
     setAdUrl(ad.url);
@@ -253,13 +269,25 @@ const SuperAdminAds = () => {
     setAdPositions(ad.positions || (ad.position ? [ad.position] : []));
     setTargetingType(ad.targeting?.type || 'GLOBAL');
     setSelectedLocations(ad.targeting?.locations || []);
+    setStartDate(ad.startDate || '');
+    setEndDate(ad.endDate || '');
     setSelectedCountryCode('');
     setSelectedStateCode('');
     setSelectedCityName('');
     setError('');
     setSuccess('');
     setShowModal(true);
-  };
+  }, []);
+
+  useEffect(() => {
+    const campaignId = searchParams.get('campaign');
+    if (!campaignId || loading || showModal) return;
+    const ad = ads.find(item => item._id === campaignId);
+    if (ad) handleOpenEditModal(ad);
+    const params = new URLSearchParams(searchParams);
+    params.delete('campaign');
+    setSearchParams(params, { replace: true });
+  }, [ads, handleOpenEditModal, loading, searchParams, setSearchParams, showModal]);
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
@@ -280,6 +308,10 @@ const SuperAdminAds = () => {
       setError('Add at least one location for regional targeting.');
       return;
     }
+    if (startDate && endDate && startDate > endDate) {
+      setError('Choose an end date on or after the start date.');
+      return;
+    }
 
     setUploading(true);
     setError('');
@@ -290,6 +322,8 @@ const SuperAdminAds = () => {
         name: adName,
         positions: adPositions,
         url: adUrl,
+        startDate: startDate || null,
+        endDate: endDate || null,
         targeting: {
           type: targetingType,
           locations: selectedLocations
@@ -381,8 +415,20 @@ const SuperAdminAds = () => {
   };
 
   // Metrics calculations
+  const today = new Date().toISOString().slice(0, 10);
+  const invalidSchedule = Boolean(startDate && endDate && startDate > endDate);
+  const matchingBusinesses = showModal ? (audienceData?.businesses || []).filter(business =>
+    businessMatchesAudience(business, targetingType, selectedLocations)
+  ) : [];
+  const overlappingAds = showModal ? findOverlappingAds(ads, {
+    _id: editId,
+    positions: adPositions,
+    startDate,
+    endDate,
+    targeting: { type: targetingType, locations: selectedLocations }
+  }, today) : [];
   const totalAds = ads.length;
-  const activeAds = ads.filter(ad => ad.isActive).length;
+  const activeAds = ads.filter(ad => campaignStatus(ad, today) === 'Active').length;
   const totalViews = ads.reduce((sum, ad) => sum + (ad.views || 0), 0);
   const totalClicks = ads.reduce((sum, ad) => sum + (ad.clicks || 0), 0);
   const overallCTR = totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(1) : '0.0';
@@ -398,8 +444,7 @@ const SuperAdminAds = () => {
     }
 
     // 2. Status
-    if (statusFilter === 'ACTIVE' && !ad.isActive) return false;
-    if (statusFilter === 'INACTIVE' && ad.isActive) return false;
+    if (statusFilter !== 'ALL' && campaignStatus(ad, today).toUpperCase() !== statusFilter) return false;
 
     // 3. Placement
     if (placementFilter !== 'ALL') {
@@ -544,7 +589,9 @@ const SuperAdminAds = () => {
             >
               <option value="ALL">All Statuses</option>
               <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
+              <option value="SCHEDULED">Scheduled</option>
+              <option value="PAUSED">Paused</option>
+              <option value="ENDED">Ended</option>
             </select>
           </label>
 
@@ -589,6 +636,7 @@ const SuperAdminAds = () => {
           filteredAds.map((ad) => {
             const hasRegionalLocations = ad.targeting?.type === 'REGIONAL' && ad.targeting.locations?.length > 0;
             const isExpanded = !!expandedAdIds[ad._id];
+            const status = campaignStatus(ad, today);
             
             return (
               <div className="col-12 col-md-6 col-xl-4" key={ad._id}>
@@ -607,8 +655,8 @@ const SuperAdminAds = () => {
                       ></div>
                       
                       {/* Active/Inactive badge absolute */}
-                      <span className={`badge rounded-pill position-absolute top-0 end-0 m-3 shadow-sm px-2 py-1 fw-bold ${ad.isActive ? 'bg-success text-white' : 'bg-secondary text-white'}`}>
-                        {ad.isActive ? '● Active' : '● Inactive'}
+                      <span className={`badge rounded-pill position-absolute top-0 end-0 m-3 shadow-sm px-2 py-1 fw-bold ${status === 'Active' ? 'bg-success text-white' : 'bg-secondary text-white'}`}>
+                        {status}
                       </span>
                     </div>
                     
@@ -619,6 +667,7 @@ const SuperAdminAds = () => {
                           <h5 className="fw-bold text-dark mb-1 text-truncate" style={{ maxWidth: '270px' }} title={ad.name}>
                             {ad.name}
                           </h5>
+                          {(ad.startDate || ad.endDate) && <p className="small text-muted mb-1">{describeSchedule(ad)} (UTC)</p>}
                           <a 
                             href={ad.url} 
                             target="_blank" 
@@ -1044,8 +1093,25 @@ const SuperAdminAds = () => {
               </div>
 
               <section className="portal-form-summary mt-4" aria-labelledby="campaign-review-title">
-                <h3 id="campaign-review-title" className="portal-form-section-title"><i className="bi bi-list-check portal-form-icon" aria-hidden="true" /> Review campaign</h3>
+                <h3 id="campaign-review-title" className="portal-form-section-title"><i className="bi bi-calendar-week portal-form-icon" aria-hidden="true" /> Schedule preview</h3>
+                <div className="workspace-filters mb-2">
+                  <label className="workspace-field">
+                    <span>Start date (optional)</span>
+                    <input className="form-control" type="date" value={startDate} onChange={event => setStartDate(event.target.value)} />
+                  </label>
+                  <label className="workspace-field">
+                    <span>End date (optional)</span>
+                    <input className="form-control" type="date" min={startDate || undefined} value={endDate}
+                      aria-invalid={invalidSchedule} onChange={event => setEndDate(event.target.value)} />
+                  </label>
+                </div>
+                <p className="small text-muted mb-2">Dates use UTC. Ads can run through the end of the selected end date.</p>
+                {invalidSchedule && <p className="small text-danger" role="alert">Choose an end date on or after the start date.</p>}
                 <dl className="campaign-review">
+                  <div>
+                    <dt>Schedule</dt>
+                    <dd>{describeSchedule({ startDate, endDate })}</dd>
+                  </div>
                   <div>
                     <dt>Placements</dt>
                     <dd>{adPositions.map(position => AD_PLACEMENTS.find(option => option.id === position)?.label || position).join(', ') || 'Choose a placement'}</dd>
@@ -1059,6 +1125,28 @@ const SuperAdminAds = () => {
                     <dd>{adUrl.trim() || 'Enter a destination URL'}</dd>
                   </div>
                 </dl>
+                <div className="mt-3">
+                  {!audienceData && <p className="small text-muted mb-0" role="status">Loading matching businesses…</p>}
+                  {audienceData?.error && (
+                    <p className="small text-warning mb-0">Could not load matching businesses. <button type="button"
+                      className="btn btn-sm btn-outline-secondary" onClick={() => setAudienceRetry(value => value + 1)}>Retry</button></p>
+                  )}
+                  {audienceData?.businesses && (
+                    <details>
+                      <summary>{matchingBusinesses.length} matching {matchingBusinesses.length === 1 ? 'business' : 'businesses'}</summary>
+                      {matchingBusinesses.length ? <ul className="small text-muted mt-2 mb-0">
+                        {matchingBusinesses.map(business => <li key={business._id}>{business.name}</li>)}
+                      </ul> : <p className="small text-muted mt-2 mb-0">No registered businesses match this audience.</p>}
+                    </details>
+                  )}
+                </div>
+                {overlappingAds.length > 0 && (
+                  <div className="alert alert-warning p-2 mt-3 mb-0" role="status">
+                    <strong>Overlapping campaigns</strong>
+                    <p className="small mb-0">These enabled campaigns share a placement, target area, and date range.</p>
+                    <ul className="small mb-0">{overlappingAds.map(ad => <li key={ad._id}>{ad.name}</li>)}</ul>
+                  </div>
+                )}
               </section>
 
             </div>
@@ -1078,7 +1166,7 @@ const SuperAdminAds = () => {
                 type="submit" 
                 className="btn btn-primary py-2 rounded-3 fw-bold bg-purple border-0 small px-5" 
                 style={{ backgroundColor: 'var(--action)' }} 
-                disabled={uploading || readingBanner}
+                disabled={uploading || readingBanner || invalidSchedule}
               >
                 {uploading ? (
                   <>
