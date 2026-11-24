@@ -259,10 +259,18 @@ This creates an optimized, static build in the `client/build` folder, ready for 
 | `/api/auth` | User authentication, registration wizard, login, and token verification |
 | `/api/admin` | Business admin operations: live queue, tokens, time slots, KYC, branding |
 | `/api/superadmin` | SuperAdmin oversight: businesses, approvals, KYC, audio alerts, reports |
-| `/api/ads` | Ad campaign management, scheduling, media uploads, and impressions |
+| `/api/ads` | Active campaign delivery and engagement events for customer-facing displays |
 | `/api/trending` | Trending topics, news feed tickers, and display broadcast engine |
 | `/api/public` | Public endpoints for digital display boards and queue view |
 | `/api/health` | Health check endpoint (`GET /api/health`) |
+
+### Recording ad engagement
+
+The customer-facing renderer requests `GET /api/ads?placement=HOME_1` (or `HOME_2`, `SIDEBAR`, `FOOTER`). Regional placements can pass `countryCode`, `stateCode`, and `cityName` so the API returns matching campaigns.
+
+Each returned ad includes a `deliveryToken`. Once the ad is visible, send `POST /api/ads/:id/events` with `{"type":"impression","deliveryToken":"…"}`. After the impression request succeeds, send the same token with `"type":"click"` when someone activates the campaign link. Successful submissions return `204`. Use the same token for retries and request a new delivery for another display of the same campaign. Tokens expire after 24 hours.
+
+The dashboard counts one view and up to one click per delivery. Fetches and admin previews do not count. Campaign totals start from recorded events and exclude legacy demo counts.
 
 ---
 

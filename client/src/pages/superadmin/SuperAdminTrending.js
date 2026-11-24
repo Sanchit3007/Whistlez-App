@@ -7,6 +7,24 @@ import socket from '../../socket';
 import { api } from '../../context/AuthContext';
 import './SuperAdminTrending.css';
 
+const scheduleTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone?.replace(/_/g, ' ') || 'Local time';
+const oneDay = 24 * 60 * 60 * 1000;
+
+const scheduleField = (instant) => {
+  if (instant == null || instant === '') return { value: '' };
+  const date = new Date(instant);
+  if (!Number.isFinite(date.getTime())) return { value: '' };
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return { value: local.toISOString().slice(0, 16), instant: date.toISOString() };
+};
+
+const readScheduleTime = ({ value, instant }) => {
+  if (!value) return null;
+  if (instant) return Date.parse(instant);
+  const time = Date.parse(value);
+  return scheduleField(time).value === value ? time : NaN;
+};
+
 const sections = [
   { id: 'overview', label: 'Overview', icon: 'bi-grid' },
   { id: 'topics', label: 'Topics', icon: 'bi-list-ul' },
@@ -85,8 +103,8 @@ const SuperAdminTrending = () => {
   const [formImage, setFormImage] = useState('');
   const [formPriority, setFormPriority] = useState(0);
   const [formStatus, setFormStatus] = useState('active');
-  const [formStartAt, setFormStartAt] = useState('');
-  const [formEndAt, setFormEndAt] = useState('');
+  const [formStartAt, setFormStartAt] = useState({ value: '' });
+  const [formEndAt, setFormEndAt] = useState({ value: '' });
   const [formIsPinned, setFormIsPinned] = useState(false);
   const [formManualPosition, setFormManualPosition] = useState('');
   const [formRankingType, setFormRankingType] = useState('auto');
@@ -111,14 +129,12 @@ const SuperAdminTrending = () => {
     setTimeout(() => setAlertMsg({ type: '', text: '' }), 5000);
   }, []);
 
-  // Helper date formatter for datetime-local forms
-  const formatDateForInput = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    const offset = date.getTimezoneOffset();
-    const adjustedDate = new Date(date.getTime() - offset * 60 * 1000);
-    return adjustedDate.toISOString().slice(0, 16);
-  };
+  const startTime = readScheduleTime(formStartAt);
+  const endTime = readScheduleTime(formEndAt);
+  const startError = Number.isNaN(startTime) ? 'Choose a valid start date and time in this time zone.' : '';
+  const endError = Number.isNaN(endTime) ? 'Choose a valid end date and time in this time zone.'
+    : startTime !== null && endTime !== null && endTime < startTime ? 'Ends must be on or after Starts.' : '';
+  const shortcutEnd = Number.isFinite(startTime) ? scheduleField(startTime + oneDay) : { value: '' };
 
   // Fetch functions
   const fetchConfig = useCallback(async () => {
@@ -269,8 +285,8 @@ const SuperAdminTrending = () => {
     setFormImage('');
     setFormPriority(0);
     setFormStatus('active');
-    setFormStartAt('');
-    setFormEndAt('');
+    setFormStartAt({ value: '' });
+    setFormEndAt({ value: '' });
     setFormIsPinned(false);
     setFormManualPosition('');
     setFormRankingType('auto');
@@ -288,8 +304,8 @@ const SuperAdminTrending = () => {
     setFormImage(topic.image || '');
     setFormPriority(topic.priority);
     setFormStatus(topic.status);
-    setFormStartAt(formatDateForInput(topic.startAt));
-    setFormEndAt(formatDateForInput(topic.endAt));
+    setFormStartAt(scheduleField(topic.startAt));
+    setFormEndAt(scheduleField(topic.endAt));
     setFormIsPinned(topic.isPinned || false);
     setFormManualPosition(topic.manualPosition !== null ? topic.manualPosition : '');
     setFormRankingType(topic.rankingType || 'auto');
@@ -301,6 +317,10 @@ const SuperAdminTrending = () => {
   const handleTopicSubmit = async (e) => {
     e.preventDefault();
     if (savingTopic || readingThumbnail) return;
+    if (startError || endError) {
+      e.currentTarget.querySelector('[aria-invalid="true"]')?.focus();
+      return;
+    }
     setTopicError('');
     setSavingTopic(true);
     const payload = {
@@ -312,8 +332,8 @@ const SuperAdminTrending = () => {
       image: formImage,
       priority: parseInt(formPriority),
       status: formStatus,
-      startAt: formStartAt || null,
-      endAt: formEndAt || null,
+      startAt: startTime === null ? null : new Date(startTime).toISOString(),
+      endAt: endTime === null ? null : new Date(endTime).toISOString(),
       isPinned: formIsPinned,
       manualPosition: formManualPosition !== '' ? parseInt(formManualPosition) : null,
       rankingType: formRankingType,
@@ -1462,95 +1482,99 @@ const SuperAdminTrending = () => {
                     )}
                   </div>
 
-                  <div className="col-12"><h3 className="portal-form-section-title mt-2 mb-0"><i className="bi bi-calendar portal-form-icon" aria-hidden="true" /> Publishing schedule</h3></div>
-                  <div className="col-md-6">
-                    <label htmlFor="trending-topic-status" className="form-label fw-bold text-dark mb-1">Status</label>
-                    <select id="trending-topic-status"
-                      className="form-select"
-                      value={formStatus}
-                      onChange={(e) => setFormStatus(e.target.value)}
-                    >
-                      <option value="active">Active</option>
-                      <option value="draft">Draft</option>
-                      <option value="scheduled">Scheduled</option>
-                      <option value="paused">Paused</option>
-                      <option value="expired">Expired</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
+                  <div className="col-12">
+                    <section className="topic-schedule" aria-labelledby="trending-schedule-title">
+                      <h3 id="trending-schedule-title" className="portal-form-section-title">
+                        <i className="bi bi-calendar portal-form-icon" aria-hidden="true" /> Publishing schedule
+                      </h3>
+                      <div>
+                        <label htmlFor="trending-topic-status" className="form-label mb-1">Status</label>
+                        <select id="trending-topic-status" className="form-select"
+                          value={formStatus} onChange={(e) => setFormStatus(e.target.value)}>
+                          <option value="active">Active</option>
+                          <option value="draft">Draft</option>
+                          <option value="scheduled">Scheduled</option>
+                          <option value="paused">Paused</option>
+                          <option value="expired">Expired</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                      </div>
+                      <div className="topic-schedule-dates">
+                        <p id="trending-schedule-zone" className="topic-schedule-zone">
+                          <i className="bi bi-clock" aria-hidden="true" /> Time zone · {scheduleTimeZone}
+                        </p>
+                        <div className="topic-schedule-grid">
+                          <div>
+                            <label htmlFor="trending-topic-start-date-time" className="form-label mb-1">Starts</label>
+                            <input id="trending-topic-start-date-time" type="datetime-local" className={`form-control${startError ? ' is-invalid' : ''}`}
+                              value={formStartAt.value} onChange={(e) => setFormStartAt({ value: e.target.value })}
+                              aria-invalid={Boolean(startError)} aria-describedby={`trending-schedule-zone${startError ? ' trending-schedule-start-error' : ''}`} />
+                            {startError && <p id="trending-schedule-start-error" className="invalid-feedback" role="alert">{startError}</p>}
+                          </div>
+                          <div>
+                            <label htmlFor="trending-topic-end-date-time" className="form-label mb-1">Ends</label>
+                            <input id="trending-topic-end-date-time" type="datetime-local" className={`form-control${endError ? ' is-invalid' : ''}`}
+                              value={formEndAt.value} onChange={(e) => setFormEndAt({ value: e.target.value })}
+                              aria-invalid={Boolean(endError)} aria-describedby={`trending-schedule-zone${endError ? ' trending-schedule-end-error' : ''}`} />
+                            {endError && <p id="trending-schedule-end-error" className="invalid-feedback" role="alert">{endError}</p>}
+                            <button type="button" className="btn btn-sm btn-outline-secondary topic-schedule-shortcut"
+                              disabled={!shortcutEnd.value}
+                              onClick={() => setFormEndAt(shortcutEnd)}>
+                              <i className="bi bi-clock-history" aria-hidden="true" /> Ends in 24 hours
+                            </button>
+                            {!shortcutEnd.value && <p className="topic-schedule-zone mt-1">Choose a start time to use the shortcut.</p>}
+                          </div>
+                        </div>
+                      </div>
+                    </section>
                   </div>
 
-                  <div className="col-md-6">
-                    <label htmlFor="trending-topic-start-date-time" className="form-label fw-bold text-dark mb-1">Start Date & Time</label>
-                    <input id="trending-topic-start-date-time" 
-                      type="datetime-local" 
-                      className="form-control" 
-                      value={formStartAt} 
-                      onChange={(e) => setFormStartAt(e.target.value)} 
-                    />
-                  </div>
-
-                  <div className="col-md-6">
-                    <label htmlFor="trending-topic-end-date-time" className="form-label fw-bold text-dark mb-1">End Date & Time</label>
-                    <input id="trending-topic-end-date-time" 
-                      type="datetime-local" 
-                      className="form-control" 
-                      value={formEndAt} 
-                      onChange={(e) => setFormEndAt(e.target.value)} 
-                    />
-                  </div>
-
-                  <div className="col-md-12">
-                    <h3 className="portal-form-section-title mt-2 mb-0"><i className="bi bi-sliders portal-form-icon" aria-hidden="true" /> Editorial controls</h3>
-                  </div>
-
-                  <div className="col-md-6">
-                    <div className="form-check form-switch mt-2">
-                      <input 
-                        className="form-check-input" 
-                        type="checkbox" 
-                        id="formIsPinned"
-                        checked={formIsPinned} 
-                        onChange={(e) => setFormIsPinned(e.target.checked)} 
-                      />
-                      <label className="form-check-label fw-bold text-dark" htmlFor="formIsPinned">Pin Topic</label>
-                    </div>
-                  </div>
-
-                  <div className="col-md-6">
-                    <label htmlFor="trending-topic-manual-override-position" className="form-label fw-bold text-dark mb-1">Manual Override Position</label>
-                    <input id="trending-topic-manual-override-position" 
-                      type="number"
-                      className="form-control"
-                      placeholder="Rank e.g. 1, 2"
-                      value={formManualPosition}
-                      onChange={(e) => setFormManualPosition(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="col-md-6">
-                    <label htmlFor="trending-topic-selection-mode-type" className="form-label fw-bold text-dark mb-1">Selection Mode Type</label>
-                    <select id="trending-topic-selection-mode-type" 
-                      className="form-select"
-                      value={formRankingType}
-                      onChange={(e) => setFormRankingType(e.target.value)}
-                    >
-                      <option value="auto">Auto</option>
-                      <option value="manual">Manual</option>
-                      <option value="random">Random</option>
-                    </select>
-                  </div>
-
-                  <div className="col-md-6">
-                    <div className="form-check form-switch mt-4">
-                      <input 
-                        className="form-check-input" 
-                        type="checkbox" 
-                        id="formIsExcluded"
-                        checked={formIsExcluded} 
-                        onChange={(e) => setFormIsExcluded(e.target.checked)} 
-                      />
-                      <label className="form-check-label fw-bold text-dark" htmlFor="formIsExcluded">Exclude from Automatic Rotation</label>
-                    </div>
+                  <div className="col-12">
+                    <section className="topic-editorial" aria-labelledby="trending-editorial-title">
+                      <h3 id="trending-editorial-title" className="portal-form-section-title">
+                        <i className="bi bi-sliders portal-form-icon" aria-hidden="true" /> Editorial controls
+                      </h3>
+                      <div className="topic-editorial-grid">
+                        <div>
+                          <label htmlFor="trending-topic-selection-mode-type" className="form-label mb-1">Ranking type</label>
+                          <select id="trending-topic-selection-mode-type" className="form-select"
+                            value={formRankingType} onChange={(e) => setFormRankingType(e.target.value)}>
+                            <option value="auto">Auto</option>
+                            <option value="manual">Manual</option>
+                            <option value="random">Random</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label htmlFor="trending-topic-manual-override-position" className="form-label mb-1">Pinned position</label>
+                          <input id="trending-topic-manual-override-position" type="number" className="form-control"
+                            placeholder="Optional" aria-describedby="trending-topic-position-hint"
+                            value={formManualPosition} onChange={(e) => setFormManualPosition(e.target.value)} />
+                          <p id="trending-topic-position-hint" className="topic-editorial-hint">
+                            Used when pinned. Leave blank to request position 1.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="topic-editorial-grid topic-editorial-switches">
+                        <label className="topic-editorial-switch form-switch" htmlFor="formIsPinned">
+                          <span>
+                            <strong id="trending-pin-label">Pin topic</strong>
+                            <span id="trending-pin-hint" className="topic-editorial-hint">Give this topic a preferred spot in the feed.</span>
+                          </span>
+                          <input className="form-check-input" type="checkbox" role="switch" id="formIsPinned"
+                            aria-labelledby="trending-pin-label" aria-describedby="trending-pin-hint"
+                            checked={formIsPinned} onChange={(e) => setFormIsPinned(e.target.checked)} />
+                        </label>
+                        <label className="topic-editorial-switch form-switch" htmlFor="formIsExcluded">
+                          <span>
+                            <strong id="trending-exclude-label">Exclude from rotation</strong>
+                            <span id="trending-exclude-hint" className="topic-editorial-hint">Skip automatic rotation. Pinned topics can still appear.</span>
+                          </span>
+                          <input className="form-check-input" type="checkbox" role="switch" id="formIsExcluded"
+                            aria-labelledby="trending-exclude-label" aria-describedby="trending-exclude-hint"
+                            checked={formIsExcluded} onChange={(e) => setFormIsExcluded(e.target.checked)} />
+                        </label>
+                      </div>
+                    </section>
                   </div>
                 </div>
               </div>

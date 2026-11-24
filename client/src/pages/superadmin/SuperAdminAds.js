@@ -12,6 +12,7 @@ import { AD_PLACEMENTS, businessMatchesAudience, campaignStatus, describeSchedul
 const SuperAdminAds = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [ads, setAds] = useState([]);
+  const adsRequest = useRef(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -168,36 +169,45 @@ const SuperAdminAds = () => {
     }
   };
 
-  const fetchAds = async () => {
+  const fetchAds = useCallback(async ({ background = false } = {}) => {
+    adsRequest.current?.abort();
+    const request = new AbortController();
+    adsRequest.current = request;
     try {
-      const res = await api.get('/superadmin/ads');
-      if (res.data.success) {
+      const res = await api.get('/superadmin/ads', { signal: request.signal });
+      if (!request.signal.aborted && res.data.success) {
         setAds(res.data.ads);
       }
     } catch (err) {
-      console.error('Error loading ads', err);
-      setError('Could not fetch advertising campaigns.');
+      if (!request.signal.aborted && !background) {
+        console.error('Error loading ads', err);
+        setError('Could not fetch advertising campaigns.');
+      }
     } finally {
-      setLoading(false);
+      if (adsRequest.current === request) {
+        adsRequest.current = null;
+        if (!request.signal.aborted) setLoading(false);
+      }
     }
-  };
-
-  useEffect(() => {
-    setLoading(true);
-    fetchAds();
   }, []);
 
-  // Socket listener for real-time updates
   useEffect(() => {
+    fetchAds();
     socket.emit('joinSuperAdmin');
-    const handleUpdate = () => {
-      fetchAds();
+    const handleUpdate = () => fetchAds();
+    const refreshVisible = () => {
+      if (!document.hidden && !adsRequest.current) fetchAds({ background: true });
     };
+    const interval = window.setInterval(refreshVisible, 30000);
+    document.addEventListener('visibilitychange', refreshVisible);
     socket.on('adsUpdated', handleUpdate);
     return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', refreshVisible);
       socket.off('adsUpdated', handleUpdate);
+      adsRequest.current?.abort();
     };
-  }, []);
+  }, [fetchAds]);
 
   const handleImageUpload = (e) => {
     const input = e.currentTarget;

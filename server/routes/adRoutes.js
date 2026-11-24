@@ -1,7 +1,9 @@
 const express = require('express');
+const { isObjectIdOrHexString } = require('mongoose');
 const router = express.Router();
 const Ad = require('../models/Ad');
 const { activeAdsOn } = require('../utils/adSchedule');
+const { issueDeliveryToken, verifyDelivery, recordView, recordClick, withAdEngagement } = require('../services/adEngagement');
 
 const AD_PLACEMENTS = [
   { id: 'HOME_1', label: 'Home Page 1' },
@@ -82,10 +84,44 @@ router.get('/', async (req, res) => {
       return false;
     });
 
-    res.json({ success: true, ads: matchedAds });
+    const deliveredAds = (await withAdEngagement(matchedAds)).map(ad => ({
+      ...ad,
+      deliveryToken: issueDeliveryToken(ad._id)
+    }));
+    res.set('Cache-Control', 'no-store');
+    res.json({ success: true, ads: deliveredAds });
   } catch (error) {
     console.error('Error fetching client ads:', error);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+router.post('/:id/events', async (req, res) => {
+  const { id } = req.params;
+  const { type, deliveryToken } = req.body || {};
+  if (!isObjectIdOrHexString(id) || !['impression', 'click'].includes(type)) {
+    return res.status(400).json({ success: false, message: 'Invalid ad event.' });
+  }
+  const adId = id.toLowerCase();
+  const deliveryId = verifyDelivery(deliveryToken, adId);
+  if (!deliveryId) {
+    return res.status(400).json({ success: false, message: 'Invalid or expired ad delivery token.' });
+  }
+
+  try {
+    if (type === 'impression') {
+      const today = new Date().toISOString().slice(0, 10);
+      if (!await Ad.exists({ _id: adId, ...activeAdsOn(today) })) {
+        return res.status(404).json({ success: false, message: 'Campaign is unavailable.' });
+      }
+      await recordView(adId, deliveryId);
+    } else if (!await recordClick(adId, deliveryId)) {
+      return res.status(409).json({ success: false, message: 'Record the impression before recording a click.' });
+    }
+    return res.status(204).end();
+  } catch (error) {
+    console.error('Error recording ad event:', error);
+    return res.status(500).json({ success: false, message: 'Could not record the ad event.' });
   }
 });
 

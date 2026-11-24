@@ -2,6 +2,7 @@ const Business = require('../models/Business');
 const User = require('../models/User');
 const Ringtone = require('../models/Ringtone');
 const Ad = require('../models/Ad');
+const { withAdEngagement } = require('../services/adEngagement');
 const { uploadToCloudinary, sendMediaUploadError } = require('../config/cloudinary');
 const { activeAdsOn, validateAdSchedule } = require('../utils/adSchedule');
 const { recordKycActivity } = require('../utils/kycActivity');
@@ -270,7 +271,7 @@ const getAds = async (req, res) => {
         : (adObj.position ? [adObj.position] : []);
       return adObj;
     });
-    res.json({ success: true, ads: normalizedAds });
+    res.json({ success: true, ads: await withAdEngagement(normalizedAds) });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error' });
   }
@@ -376,10 +377,6 @@ const createAd = async (req, res) => {
       }
     }
     
-    // Inject mock statistics views & clicks for rich visualization
-    const views = Math.floor(Math.random() * 15000) + 1200;
-    const clicks = Math.floor(views * (Math.random() * 0.08 + 0.01)); // 1% to 9% CTR
-
     // Upload ad file to Cloudinary
     const fileUrl = await uploadToCloudinary(file, 'ads');
 
@@ -389,8 +386,6 @@ const createAd = async (req, res) => {
       position: finalPositions[0] || 'Home Page 1',
       file: fileUrl,
       url,
-      views,
-      clicks,
       startDate: startDate || null,
       endDate: endDate || null,
       targeting: validatedTargeting
@@ -523,6 +518,7 @@ const updateAd = async (req, res) => {
       ad.targeting = validatedTargeting;
     }
 
+    const [{ views, clicks }] = await withAdEngagement([ad.toObject()]);
     await ad.save();
 
     const io = req.app.get('io');
@@ -530,7 +526,7 @@ const updateAd = async (req, res) => {
       io.to('superadmin').emit('adsUpdated');
     }
 
-    res.json({ success: true, ad });
+    res.json({ success: true, ad: { ...ad.toObject(), views, clicks } });
   } catch (error) {
     if (sendMediaUploadError(res, error)) return;
     console.error('Error updating ad campaign:', error);
@@ -542,6 +538,7 @@ const toggleAd = async (req, res) => {
   try {
     const ad = await Ad.findById(req.params.id);
     if (!ad) return res.status(404).json({ success: false, message: 'Ad campaign not found' });
+    const [{ views, clicks }] = await withAdEngagement([ad.toObject()]);
     ad.isActive = !ad.isActive;
     await ad.save();
 
@@ -550,7 +547,7 @@ const toggleAd = async (req, res) => {
       io.to('superadmin').emit('adsUpdated');
     }
 
-    res.json({ success: true, ad });
+    res.json({ success: true, ad: { ...ad.toObject(), views, clicks } });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error' });
   }
