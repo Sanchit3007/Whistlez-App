@@ -1,4 +1,5 @@
 const Business = require('../models/Business');
+const User = require('../models/User');
 const { KYC_NOTIFICATION_STATUSES, getLegacyKycActivity } = require('../utils/kycActivity');
 
 const getKycNotifications = async (req, res) => {
@@ -27,4 +28,34 @@ const getKycNotifications = async (req, res) => {
   }
 };
 
-module.exports = { getKycNotifications };
+const getReadNotifications = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('readNotificationIds').lean();
+    res.json({ success: true, ids: user?.readNotificationIds || [] });
+  } catch (error) {
+    console.error('Could not load read notifications:', error.message);
+    res.status(500).json({ success: false, message: 'Could not load read notifications.' });
+  }
+};
+
+const markNotificationsRead = async (req, res) => {
+  const ids = req.body?.ids;
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 500 ||
+      ids.some(id => typeof id !== 'string' || id.length === 0 || id.length > 128)) {
+    return res.status(400).json({ success: false, message: 'Invalid notification IDs.' });
+  }
+
+  try {
+    await User.updateOne(
+      { _id: req.user._id },
+      { $addToSet: { readNotificationIds: { $each: ids } } },
+      { timestamps: false }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Could not save read notifications:', error.message);
+    res.status(500).json({ success: false, message: 'Could not save read notifications.' });
+  }
+};
+
+module.exports = { getKycNotifications, getReadNotifications, markNotificationsRead };

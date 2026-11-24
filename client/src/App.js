@@ -60,7 +60,7 @@ const ProtectedRoute = ({ children, allowedRoles, standalone = false }) => {
   }
 
   if (!standalone && (user.role === 'admin' || user.role === 'superadmin')) {
-    return <AuthenticatedWorkspace user={user}>{children}</AuthenticatedWorkspace>;
+    return <AuthenticatedWorkspace key={user._id || user.id || user.email} user={user}>{children}</AuthenticatedWorkspace>;
   }
 
   return children;

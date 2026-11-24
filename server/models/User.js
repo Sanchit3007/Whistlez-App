@@ -30,6 +30,11 @@ const UserSchema = new mongoose.Schema(
       required: function() {
         return this.role === 'admin';
       }
+    },
+    readNotificationIds: {
+      type: [String],
+      default: undefined,
+      select: false
     }
   },
   { 

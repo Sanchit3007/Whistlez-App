@@ -64,9 +64,17 @@ const readAlerts = async (isSuperAdmin, signal) => {
 const loadRead = storageKey => {
   try {
     const saved = JSON.parse(window.localStorage.getItem(storageKey));
-    return new Set(Array.isArray(saved) ? saved : []);
+    return Array.isArray(saved)
+      ? saved.filter(id => typeof id === 'string' && id.length > 0 && id.length <= 128)
+      : [];
   } catch {
-    return new Set();
+    return [];
+  }
+};
+
+const saveRead = async (url, ids, signal) => {
+  for (let offset = 0; offset < ids.length && !signal?.aborted; offset += 500) {
+    await api.patch(url, { ids: ids.slice(offset, offset + 500) }, { signal });
   }
 };
 
@@ -75,11 +83,19 @@ const WorkspaceNotifications = ({ user }) => {
   const [refresh, setRefresh] = useState(0);
   const [alerts, setAlerts] = useState(null);
   const storageKey = `whistlez:notifications:${user._id || user.id || user.email || user.role}`;
-  const [read, setRead] = useState(() => loadRead(storageKey));
+  const [read, setRead] = useState(() => new Set(loadRead(storageKey)));
   const trigger = useRef(null);
   const popover = useRef(null);
+  const writeSession = useRef(null);
   const titleId = useId();
   const isSuperAdmin = user.role === 'superadmin';
+  const readUrl = `/${isSuperAdmin ? 'superadmin' : 'admin'}/notifications/read`;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    writeSession.current = controller;
+    return () => controller.abort();
+  }, [storageKey]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -101,14 +117,31 @@ const WorkspaceNotifications = ({ user }) => {
 
   useEffect(() => {
     let request;
-    const reload = () => {
+    const reload = async () => {
       if (document.hidden || !popover.current?.getClientRects().length) return;
       request?.abort();
       const current = new AbortController();
       request = current;
-      readAlerts(isSuperAdmin, current.signal).then(result => {
-        if (!current.signal.aborted) setAlerts(result);
-      });
+      const { signal } = current;
+      try {
+        const [result, { data }] = await Promise.all([
+          readAlerts(isSuperAdmin, signal),
+          api.get(readUrl, { signal })
+        ]);
+        if (signal.aborted) return;
+
+        const accountRead = new Set(data.ids);
+        const browserRead = loadRead(storageKey);
+        setRead(previous => new Set([...previous, ...accountRead, ...browserRead]));
+        setAlerts(result);
+
+        const unsaved = browserRead.filter(id => !accountRead.has(id));
+        await saveRead(readUrl, unsaved, signal).catch(() => {
+          // The next refresh retries these IDs from browser storage.
+        });
+      } catch {
+        if (!signal.aborted) setAlerts(previous => ({ items: previous?.items || [], error: true }));
+      }
     };
     const events = isSuperAdmin ? ['kycSubmitted', 'businessesUpdated', 'adsUpdated'] : ['tokenUpdated', 'kycStatusUpdated'];
     const viewport = window.matchMedia?.('(max-width: 991.98px)');
@@ -124,28 +157,27 @@ const WorkspaceNotifications = ({ user }) => {
       document.removeEventListener('visibilitychange', reload);
       viewport?.removeEventListener('change', reload);
     };
-  }, [isSuperAdmin, open, refresh]);
+  }, [isSuperAdmin, open, readUrl, refresh, storageKey]);
 
   const markRead = ids => {
-    const updated = new Set([...loadRead(storageKey), ...read, ...ids]);
-    setRead(updated);
+    setRead(previous => new Set([...previous, ...ids]));
     try {
-      window.localStorage.setItem(storageKey, JSON.stringify([...updated]));
+      const browserRead = new Set([...loadRead(storageKey), ...ids]);
+      window.localStorage.setItem(storageKey, JSON.stringify([...browserRead]));
     } catch {
       // Keep the current read state when browser storage is unavailable.
     }
+    saveRead(readUrl, ids, writeSession.current?.signal).catch(() => {
+      // The next refresh retries these IDs from browser storage.
+    });
   };
 
   const unread = alerts?.items.filter(item => !read.has(item.id)) || [];
   return (
     <div className="workspace-notifications" ref={popover}>
       <button type="button" ref={trigger} className="btn btn-outline-secondary workspace-menu workspace-bell"
-        aria-label="Notifications" aria-expanded={open} aria-controls={open ? `${titleId}-panel` : undefined} onClick={() => {
-          if (!open) {
-            setRead(loadRead(storageKey));
-          }
-          setOpen(!open);
-        }}>
+        aria-label="Notifications" aria-expanded={open} aria-controls={open ? `${titleId}-panel` : undefined}
+        onClick={() => setOpen(!open)}>
         <i className="bi bi-bell" aria-hidden="true" />
         {unread.length > 0 && <span className="workspace-bell-dot" aria-hidden="true" />}
       </button>

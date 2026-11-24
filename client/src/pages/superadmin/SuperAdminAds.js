@@ -497,10 +497,10 @@ const SuperAdminAds = () => {
             <div className="d-flex align-items-center justify-content-between">
               <div>
                 <span className="text-muted small fw-bold text-uppercase d-block mb-1" style={{ letterSpacing: '0.04em', fontSize: '0.72rem' }}>Total Ads</span>
-                <h2 className="fw-black text-dark mb-0 font-monospace">{totalAds}</h2>
+                <h2 className="fw-medium text-dark mb-0 font-monospace">{totalAds}</h2>
               </div>
-              <div className="stat-widget-icon stat-widget-blue d-grid align-items-center justify-content-center" style={{ width: '52px', height: '52px' }} aria-hidden="true">
-                <i className="bi bi-badge-ad-fill fs-4" />
+              <div className="stat-widget-icon stat-widget-blue" aria-hidden="true">
+                <i className="bi bi-megaphone" />
               </div>
             </div>
           </div>
@@ -512,10 +512,10 @@ const SuperAdminAds = () => {
             <div className="d-flex align-items-center justify-content-between">
               <div>
                 <span className="text-muted small fw-bold text-uppercase d-block mb-1" style={{ letterSpacing: '0.04em', fontSize: '0.72rem' }}>Active Ads</span>
-                <h2 className="fw-black text-success mb-0 font-monospace">{activeAds}</h2>
+                <h2 className="fw-medium text-success mb-0 font-monospace">{activeAds}</h2>
               </div>
-              <div className="bg-success bg-opacity-10 text-success rounded-4 p-3 d-flex align-items-center justify-content-center" style={{ width: '52px', height: '52px' }}>
-                <i className="bi bi-check-circle fs-3"></i>
+              <div className="stat-widget-icon stat-widget-green" aria-hidden="true">
+                <i className="bi bi-broadcast" />
               </div>
             </div>
           </div>
@@ -527,10 +527,10 @@ const SuperAdminAds = () => {
             <div className="d-flex align-items-center justify-content-between">
               <div>
                 <span className="text-muted small fw-bold text-uppercase d-block mb-1" style={{ letterSpacing: '0.04em', fontSize: '0.72rem' }}>Total Views</span>
-                <h2 className="fw-black text-dark mb-0 font-monospace">{totalViews.toLocaleString()}</h2>
+                <h2 className="fw-medium text-dark mb-0 font-monospace">{totalViews.toLocaleString()}</h2>
               </div>
-              <div className="bg-info bg-opacity-10 text-info rounded-4 p-3 d-flex align-items-center justify-content-center" style={{ width: '52px', height: '52px' }}>
-                <i className="bi bi-eye fs-3"></i>
+              <div className="stat-widget-icon bg-info bg-opacity-10 text-info" aria-hidden="true">
+                <i className="bi bi-eye" />
               </div>
             </div>
           </div>
@@ -542,12 +542,12 @@ const SuperAdminAds = () => {
             <div className="d-flex align-items-center justify-content-between">
               <div>
                 <span className="text-muted small fw-bold text-uppercase d-block mb-1" style={{ letterSpacing: '0.04em', fontSize: '0.72rem' }}>Clicks & CTR</span>
-                <h2 className="fw-black text-purple mb-0 font-monospace" style={{ color: 'var(--accent)' }}>
+                <h2 className="fw-medium text-purple mb-0 font-monospace" style={{ color: 'var(--accent)' }}>
                   {totalClicks.toLocaleString()} <span className="text-muted fw-normal" style={{ fontSize: '0.95rem' }}>({overallCTR}%)</span>
                 </h2>
               </div>
-              <div className="stat-widget-icon stat-widget-purple d-grid align-items-center justify-content-center" style={{ width: '52px', height: '52px' }} aria-hidden="true">
-                <i className="bi bi-cursor-fill fs-4" />
+              <div className="stat-widget-icon stat-widget-purple" aria-hidden="true">
+                <i className="bi bi-cursor" />
               </div>
             </div>
           </div>
