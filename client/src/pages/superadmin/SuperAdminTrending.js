@@ -25,6 +25,11 @@ const readScheduleTime = ({ value, instant }) => {
   return scheduleField(time).value === value ? time : NaN;
 };
 
+const latestConfig = (current, incoming) => {
+  if (!incoming || Date.parse(incoming.updatedAt) < Date.parse(current.updatedAt)) return current;
+  return incoming;
+};
+
 const sections = [
   { id: 'overview', label: 'Overview', icon: 'bi-grid' },
   { id: 'topics', label: 'Topics', icon: 'bi-list-ul' },
@@ -61,6 +66,7 @@ const SuperAdminTrending = () => {
   // Topics state
   const [topics, setTopics] = useState([]);
   const topicsSearch = useRef(null);
+  const topicsRequest = useRef(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -141,7 +147,7 @@ const SuperAdminTrending = () => {
     try {
       const res = await api.get('/superadmin/trending/config');
       if (res.data.success) {
-        setConfig(res.data.config);
+        setConfig(current => latestConfig(current, res.data.config));
       }
     } catch (err) {
       console.error(err);
@@ -150,6 +156,9 @@ const SuperAdminTrending = () => {
   }, [showAlert]);
 
   const fetchTopicsPool = useCallback(async () => {
+    topicsRequest.current?.abort();
+    const request = new AbortController();
+    topicsRequest.current = request;
     try {
       setLoading(true);
       const params = {
@@ -157,16 +166,17 @@ const SuperAdminTrending = () => {
         rankingType: filterRankingType, date: filterDate, sort: sortField,
         page: currentPage, limit: 10
       };
-      const res = await api.get('/superadmin/trending/topics', { params });
-      if (res.data.success) {
+      const res = await api.get('/superadmin/trending/topics', { params, signal: request.signal });
+      if (!request.signal.aborted && res.data.success) {
         setTopics(res.data.topics);
         setTotalPages(res.data.pagination.pages || 1);
       }
     } catch (err) {
+      if (request.signal.aborted) return;
       console.error(err);
       showAlert('danger', 'Failed to retrieve topics');
     } finally {
-      setLoading(false);
+      if (!request.signal.aborted) setLoading(false);
     }
   }, [searchQuery, filterCategory, filterStatus, filterRankingType, filterDate, sortField, currentPage, showAlert]);
 
@@ -212,8 +222,15 @@ const SuperAdminTrending = () => {
   );
 
   useEffect(() => {
-    fetchAllData();
-  }, [fetchAllData]);
+    fetchConfig();
+    fetchTodayHistory();
+    fetchHistorySummaries();
+  }, [fetchConfig, fetchTodayHistory, fetchHistorySummaries]);
+
+  useEffect(() => {
+    fetchTopicsPool();
+    return () => topicsRequest.current?.abort();
+  }, [fetchTopicsPool]);
 
   // Socket updates listener
   useEffect(() => {
@@ -468,13 +485,10 @@ const SuperAdminTrending = () => {
   // Global Config form saves
   const handleSaveConfig = async (updatedFields) => {
     try {
-      const res = await api.put('/superadmin/trending/config', {
-        ...config,
-        ...updatedFields
-      });
+      const res = await api.put('/superadmin/trending/config', updatedFields);
       if (res.data.success) {
+        setConfig(current => latestConfig(current, res.data.config));
         showAlert('success', 'Global configurations updated successfully');
-        fetchConfig();
       }
     } catch (err) {
       console.error(err);
@@ -1081,7 +1095,7 @@ const SuperAdminTrending = () => {
               
               <div className="small">
                 <div className="mb-4">
-                  <div className="form-check form-switch mb-2">
+                  <div className="form-check form-switch trending-config-switch mb-2">
                     <input 
                       className="form-check-input"
                       type="checkbox"
@@ -1097,7 +1111,7 @@ const SuperAdminTrending = () => {
                 </div>
 
                 <div className="mb-4">
-                  <div className="form-check form-switch mb-2">
+                  <div className="form-check form-switch trending-config-switch mb-2">
                     <input 
                       className="form-check-input"
                       type="checkbox"
@@ -1357,7 +1371,7 @@ const SuperAdminTrending = () => {
             <div className="col-md-6">
               <label className="form-label fw-bold text-dark mb-1">Engine Controls</label>
               <div className="d-flex flex-column gap-3 mt-2">
-                <div className="form-check form-switch">
+                <div className="form-check form-switch trending-config-switch">
                   <input 
                     className="form-check-input"
                     type="checkbox"
@@ -1369,7 +1383,7 @@ const SuperAdminTrending = () => {
                     Global Trending Module Enabled
                   </label>
                 </div>
-                <div className="form-check form-switch">
+                <div className="form-check form-switch trending-config-switch">
                   <input 
                     className="form-check-input"
                     type="checkbox"

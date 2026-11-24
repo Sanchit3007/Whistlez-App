@@ -48,7 +48,8 @@
 
 .trending-feed-table { display: none; }
 .trending-feed-table table { font-size: .875rem; }
-.trending-feed-table th { overflow-wrap: anywhere; }
+.trending-feed-table thead th { white-space: nowrap; }
+.trending-feed-table tbody th { overflow-wrap: anywhere; }
 .trending-feed-list { display: grid; gap: .55rem; margin: 0; padding: 0; list-style: none; }
 .trending-feed-list li {
   display: grid;
@@ -67,6 +68,9 @@
 .trending-feed-meta > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .25rem .75rem; }
 .trending-feed-meta dt { color: var(--ink-2); font-weight: 500; }
 .trending-feed-meta dd { margin: 0; font-weight: 700; }
+
+.trending-config-switch { display: flex; align-items: center; gap: .65rem; padding-inline-start: 0; }
+.trending-config-switch .form-check-input { flex: none; float: none; margin: 0; }
 
 .topic-editorial, .topic-schedule {
   margin-block-start: .35rem;
