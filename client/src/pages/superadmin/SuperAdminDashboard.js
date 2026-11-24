@@ -247,27 +247,33 @@ const SuperAdminDashboard = () => {
       </div>
 
       {/* Stats row */}
-      <div className="row g-3 mb-4">
+      <div className="row g-3 mb-4 super-dashboard-stats">
         <div className="col-6 col-xl-3">
-          <StatCard label="Businesses" value={metrics?.totalBusinesses || 0} icon="bi-shop-window" loading={loading} />
+          <StatCard
+            label="Businesses" value={metrics?.totalBusinesses || 0} icon="bi-shop-window" loading={loading}
+            action={{ to: '/superadmin/businesses', label: 'Manage Businesses' }}
+          />
         </div>
 
         <div className="col-6 col-xl-3">
-          <StatCard label="Business admins" value={metrics?.totalAdmins || 0} icon="bi-people-fill" tone="purple" loading={loading} />
+          <StatCard
+            label="Business admins" value={metrics?.totalAdmins || 0} icon="bi-people-fill" tone="purple" loading={loading}
+            action={{ to: '/superadmin/users?role=admin', label: 'Manage Admins' }}
+          />
         </div>
 
         <div className="col-6 col-xl-3">
-          <StatCard label="Active ads" value={metrics?.totalAds || 0} icon="bi-megaphone-fill" tone="green" loading={loading} />
+          <StatCard
+            label="Active ads" value={metrics?.totalAds || 0} icon="bi-megaphone-fill" tone="green" loading={loading}
+            action={{ to: '/superadmin/ads', label: 'Manage Ads' }}
+          />
         </div>
 
         <div className="col-6 col-xl-3">
-          <div className="dash-card h-100 p-3 super-trending-summary">
-            <div className="w-100">
-              <div className="d-flex justify-content-between align-items-center mb-2">
-                <span className="text-muted small fw-bold">TRENDING</span>
-                <i className="bi bi-graph-up-arrow" style={{ color: '#fd7e14' }}></i>
-              </div>
-              
+          <div className="kpi kpi-orange">
+            <span className="kpi-label">Trending</span>
+            <span className="kpi-icon" aria-hidden="true"><i className="bi bi-graph-up-arrow"></i></span>
+            <div className="super-trending-details">
               {loading ? (
                 <div className="text-center py-2">
                   <div className="spinner-border spinner-border-sm text-muted"></div>

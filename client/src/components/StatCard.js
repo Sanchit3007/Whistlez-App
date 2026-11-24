@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Sparkline from './Sparkline';
 import { SkeletonStat } from './Skeleton';
 
@@ -37,8 +38,9 @@ const Arrow = ({ up }) => (
  *  value   number | string      (numbers count up)
  *  trend   { pct: number, label?: string, invert?: bool }   invert = lower is better (e.g. wait time)
  *  spark   number[]             real series only
+ *  action  { to: string, label: string }
  */
-const StatCard = ({ label, value, suffix, icon, tone = 'blue', loading = false, spark, trend, title }) => {
+const StatCard = ({ label, value, suffix, icon, tone = 'blue', loading = false, spark, trend, title, action }) => {
   const shown = useCountUp(typeof value === 'number' ? value : NaN);
   if (loading) return <SkeletonStat />;
 
@@ -65,9 +67,15 @@ const StatCard = ({ label, value, suffix, icon, tone = 'blue', loading = false, 
           {suffix && <span className="kpi-suffix">{suffix}</span>}
         </div>
         {chip}
+        {action && (
+          <Link className="kpi-action" to={action.to}>
+            <span>{action.label}</span>
+            <i className="bi bi-arrow-right" aria-hidden="true"></i>
+          </Link>
+        )}
       </div>
       <div className="kpi-side">
-        {icon && <span className="kpi-icon"><i className={`bi ${icon}`}></i></span>}
+        {icon && <span className="kpi-icon" aria-hidden="true"><i className={`bi ${icon}`}></i></span>}
         {spark && spark.length > 1 && <Sparkline data={spark} />}
       </div>
     </div>

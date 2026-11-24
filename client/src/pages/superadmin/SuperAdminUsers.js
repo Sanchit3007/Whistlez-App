@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import FilterToolbar from '../../components/FilterToolbar';
 import socket from '../../socket';
 import { api } from '../../context/AuthContext';
 import IdentityAvatar from '../../components/IdentityAvatar';
 
 const SuperAdminUsers = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterRole, setFilterRole] = useState('all');
+  const role = searchParams.get('role');
+  const filterRole = role === 'admin' || role === 'superadmin' ? role : 'all';
   const [timeFilter, setTimeFilter] = useState('all');
 
   const fetchUsers = async () => {
@@ -91,7 +94,13 @@ const SuperAdminUsers = () => {
             <select
               className="form-select"
               value={filterRole}
-              onChange={(e) => setFilterRole(e.target.value)}
+              onChange={(event) => {
+                const nextParams = new URLSearchParams(searchParams);
+                const nextRole = event.target.value;
+                if (nextRole === 'all') nextParams.delete('role');
+                else nextParams.set('role', nextRole);
+                setSearchParams(nextParams, { replace: true });
+              }}
             >
               <option value="all">All Roles</option>
               <option value="admin">Business Admin</option>
